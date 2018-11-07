@@ -321,7 +321,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         }).collect(Collectors.toList());
 
         List<CloudResource> newInstances = instances.stream().filter(instance -> {
-            Group group = groupsWithNewInstances.stream().filter(scaledGroup -> scaledGroup.getName().equals(instance.getGroup())).findFirst().get();
+            Group group = scaledGroups.stream().filter(scaledGroup -> scaledGroup.getName().equals(instance.getGroup())).findFirst().get();
             return group.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
         }).collect(Collectors.toList());
 

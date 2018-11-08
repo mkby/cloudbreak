@@ -6,9 +6,6 @@ import static java.util.Collections.singletonList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -22,30 +19,17 @@ import org.springframework.stereotype.Service;
 
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.cloud.ResourceConnector;
-import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
-import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
-import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
-import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
-import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedSnapshotService;
-import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
-import com.sequenceiq.cloudbreak.cloud.aws.task.AwsPollTaskFactory;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsNetworkView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
-import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
 import com.sequenceiq.cloudbreak.cloud.model.CloudInstance;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
-import com.sequenceiq.cloudbreak.cloud.model.Group;
 import com.sequenceiq.cloudbreak.cloud.model.Network;
 import com.sequenceiq.cloudbreak.cloud.model.ResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.TlsInfo;
 import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
-import com.sequenceiq.cloudbreak.cloud.task.PollTask;
-import com.sequenceiq.cloudbreak.cloud.template.compute.ComputeResourceService;
-import com.sequenceiq.cloudbreak.cloud.template.context.ResourceBuilderContext;
-import com.sequenceiq.cloudbreak.cloud.transform.CloudResourceHelper;
 import com.sequenceiq.cloudbreak.common.type.CommonResourceType;
 import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.service.Retry;
@@ -69,37 +53,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private static final String CREATED_SUBNET = "CreatedSubnet";
 
     @Inject
-    private AwsNetworkService awsNetworkService;
-
-    @Inject
     private Configuration freemarkerConfiguration;
-
-    @Inject
-    private AwsClient awsClient;
-
-    @Inject
-    private CloudFormationStackUtil cfStackUtil;
-
-    @Inject
-    private AwsBackoffSyncPollingScheduler<Boolean> awsBackoffSyncPollingScheduler;
-
-    @Inject
-    private CloudFormationTemplateBuilder cloudFormationTemplateBuilder;
-
-    @Inject
-    private AwsPollTaskFactory awsPollTaskFactory;
-
-    @Inject
-    private CloudFormationStackUtil cloudFormationStackUtil;
-
-    @Inject
-    private AwsTagPreparationService awsTagPreparationService;
-
-    @Inject
-    private EncryptedSnapshotService encryptedSnapshotService;
-
-    @Inject
-    private EncryptedImageCopyService encryptedImageCopyService;
 
     @Value("${cb.aws.vpc:}")
     private String cloudbreakVpc;
@@ -113,18 +67,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
     @Inject
     private AwsImageUpdateService awsImageUpdateService;
-
-    @Inject
-    private CloudResourceHelper cloudResourceHelper;
-
-    @Inject
-    private AwsContextBuilder contextBuilder;
-
-    @Inject
-    private AwsComputeResourceService awsComputeResourceService;
-
-    @Inject
-    private ComputeResourceService computeResourceService;
 
     @Inject
     private AwsLaunchService awsLaunchService;
@@ -150,63 +92,11 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         return awsLaunchService.launch(ac, stack, resourceNotifier, adjustmentType, threshold);
     }
 
-    private List<CloudResourceStatus> buildComputeResourcesForUpscale(AuthenticatedContext ac, CloudStack stack, List<Group> scaledGroups,
-            List<CloudResource> instances) {
-        CloudContext cloudContext = ac.getCloudContext();
-        ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
-
-        List<Group> groupsWithNewInstances = scaledGroups.stream().map(group -> {
-            List<CloudInstance> newInstances = group.getInstances().stream()
-                    .filter(instance -> Objects.isNull(instance.getInstanceId())).collect(Collectors.toList());
-
-            return new Group(group.getName(), group.getType(), newInstances, group.getSecurity(), null, group.getParameters(),
-                    group.getInstanceAuthentication(), group.getLoginUserName(), group.getPublicKey(), group.getRootVolumeSize());
-        }).collect(Collectors.toList());
-
-        List<CloudResource> newInstances = instances.stream().filter(instance -> {
-            Group group = scaledGroups.stream().filter(scaledGroup -> scaledGroup.getName().equals(instance.getGroup())).findFirst().get();
-            return group.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
-        }).collect(Collectors.toList());
-
-        awsContextService.addInstancesToContext(newInstances, context, groupsWithNewInstances);
-        return computeResourceService.buildResourcesForUpscale(context, ac, stack, groupsWithNewInstances);
-    }
-
     private boolean deployingToSameVPC(AwsNetworkView awsNetworkView, boolean existingVPC) {
         return StringUtils.isNoneEmpty(cloudbreakVpc) && existingVPC && awsNetworkView.getExistingVPC().equals(cloudbreakVpc);
     }
 
 
-    private String getCreatedSubnet(String cFStackName, AmazonCloudFormationRetryClient client) {
-        Map<String, String> outputs = cfStackUtil.getOutputs(cFStackName, client);
-        if (outputs.containsKey(CREATED_SUBNET)) {
-            return outputs.get(CREATED_SUBNET);
-        } else {
-            String outputKeyNotFound = String.format("Subnet could not be found in the Cloudformation stack('%s') output.", cFStackName);
-            throw new CloudConnectorException(outputKeyNotFound);
-        }
-    }
-
-    private String getCreatedS3AccessRoleArn(String cFStackName, AmazonCloudFormationRetryClient client) {
-        Map<String, String> outputs = cfStackUtil.getOutputs(cFStackName, client);
-        if (outputs.containsKey(S3_ACCESS_ROLE)) {
-            return outputs.get(S3_ACCESS_ROLE);
-        } else {
-            String outputKeyNotFound = String.format("S3AccessRole arn could not be found in the Cloudformation stack('%s') output.", cFStackName);
-            throw new CloudConnectorException(outputKeyNotFound);
-        }
-    }
-
-    private Supplier<CloudConnectorException> getCloudConnectorExceptionSupplier(String msg) {
-        return () -> new CloudConnectorException(msg);
-    }
-
-//    private void resumeAutoScaling(AmazonAutoScalingRetryClient amazonASClient, Collection<String> groupNames, List<String> autoScalingPolicies) {
-//        for (String groupName : groupNames) {
-//            amazonASClient.resumeProcesses(new ResumeProcessesRequest().withAutoScalingGroupName(groupName).withScalingProcesses(autoScalingPolicies));
-//        }
-//    }
-//
     @Override
     public List<CloudResourceStatus> check(AuthenticatedContext authenticatedContext, List<CloudResource> resources) {
         return new ArrayList<>();
@@ -266,25 +156,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             return freemarkerConfiguration.getTemplate(awsCloudformationTemplatePath, "UTF-8").toString();
         } catch (IOException e) {
             throw new CloudConnectorException("can't get freemarker template", e);
-        }
-    }
-
-    private List<String> getInstancesForGroup(AuthenticatedContext ac, AmazonAutoScalingRetryClient amazonASClient, AmazonCloudFormationRetryClient client,
-            Group group) {
-        return cfStackUtil.getInstanceIds(amazonASClient, cfStackUtil.getAutoscalingGroupName(ac, client, group.getName()));
-    }
-
-    private void scheduleStatusChecks(CloudStack stack, AuthenticatedContext ac, AmazonCloudFormationRetryClient cloudFormationClient) {
-        for (Group group : stack.getGroups()) {
-            String asGroupName = cfStackUtil.getAutoscalingGroupName(ac, cloudFormationClient, group.getName());
-            LOGGER.info("Polling Auto Scaling group until new instances are ready. [stack: {}, asGroup: {}]", ac.getCloudContext().getId(),
-                    asGroupName);
-            PollTask<Boolean> task = awsPollTaskFactory.newASGroupStatusCheckerTask(ac, asGroupName, group.getInstancesSize(), awsClient, cfStackUtil);
-            try {
-                awsBackoffSyncPollingScheduler.schedule(task);
-            } catch (Exception e) {
-                throw new CloudConnectorException(e.getMessage(), e);
-            }
         }
     }
 }

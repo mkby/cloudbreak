@@ -346,22 +346,7 @@ public class AwsLaunchService {
     private void suspendAutoscalingGoupsWhenNewInstancesAreReady(AuthenticatedContext ac, CloudStack stack) {
         AmazonCloudFormationRetryClient cloudFormationClient = awsClient.createCloudFormationRetryClient(new AwsCredentialView(ac.getCloudCredential()),
                 ac.getCloudContext().getLocation().getRegion().value());
-        scheduleStatusChecks(stack, ac, cloudFormationClient);
+        awsAutoScalingService.scheduleStatusChecks(stack, ac, cloudFormationClient);
         awsAutoScalingService.suspendAutoScaling(ac, stack);
-    }
-
-    // TODO remove duplication
-    private void scheduleStatusChecks(CloudStack stack, AuthenticatedContext ac, AmazonCloudFormationRetryClient cloudFormationClient) {
-        for (Group group : stack.getGroups()) {
-            String asGroupName = cfStackUtil.getAutoscalingGroupName(ac, cloudFormationClient, group.getName());
-            LOGGER.info("Polling Auto Scaling group until new instances are ready. [stack: {}, asGroup: {}]", ac.getCloudContext().getId(),
-                    asGroupName);
-            PollTask<Boolean> task = awsPollTaskFactory.newASGroupStatusCheckerTask(ac, asGroupName, group.getInstancesSize(), awsClient, cfStackUtil);
-            try {
-                awsBackoffSyncPollingScheduler.schedule(task);
-            } catch (Exception e) {
-                throw new CloudConnectorException(e.getMessage(), e);
-            }
-        }
     }
 }

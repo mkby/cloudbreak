@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -19,12 +20,15 @@ import com.amazonaws.services.autoscaling.model.DescribeAutoScalingGroupsResult;
 import com.amazonaws.services.autoscaling.model.Instance;
 import com.amazonaws.services.cloudformation.model.DescribeStackResourceRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStackResourceResult;
+import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
+import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.google.common.base.Splitter;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsCredentialView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
+import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
 import com.sequenceiq.cloudbreak.common.type.CommonStatus;
@@ -62,6 +66,18 @@ public class CloudFormationStackUtil {
                 .withStackName(cFStackName)
                 .withLogicalResourceId(String.format("AmbariNodes%s", instanceGroup.replaceAll("_", ""))));
         return asGroupResource.getStackResourceDetail().getPhysicalResourceId();
+    }
+
+    public Map<String, String> getOutputs(String cFStackName, AmazonCloudFormationRetryClient client) {
+        DescribeStacksRequest describeStacksRequest = new DescribeStacksRequest().withStackName(cFStackName);
+        String outputNotFound = String.format("Couldn't get Cloudformation stack's('%s') output", cFStackName);
+        List<Output> cfStackOutputs = client.describeStacks(describeStacksRequest).getStacks()
+                .stream().findFirst().orElseThrow(getCloudConnectorExceptionSupplier(outputNotFound)).getOutputs();
+        return cfStackOutputs.stream().collect(Collectors.toMap(Output::getOutputKey, Output::getOutputValue));
+    }
+
+    private Supplier<CloudConnectorException> getCloudConnectorExceptionSupplier(String msg) {
+        return () -> new CloudConnectorException(msg);
     }
 
     public List<CloudResource> getInstanceCloudResources(AuthenticatedContext ac, AmazonCloudFormationRetryClient client,

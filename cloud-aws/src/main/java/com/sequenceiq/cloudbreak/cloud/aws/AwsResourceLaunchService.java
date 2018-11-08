@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,7 +30,6 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.OnFailure;
-import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.StackStatus;
 import com.amazonaws.services.ec2.AmazonEC2Client;
@@ -43,6 +42,7 @@ import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
+import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
 import com.sequenceiq.cloudbreak.cloud.aws.task.AwsPollTaskFactory;
@@ -50,13 +50,18 @@ import com.sequenceiq.cloudbreak.cloud.aws.view.AwsCredentialView;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsInstanceProfileView;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsNetworkView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
+import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
+import com.sequenceiq.cloudbreak.cloud.model.CloudInstance;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
+import com.sequenceiq.cloudbreak.cloud.model.InstanceTemplate;
 import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
 import com.sequenceiq.cloudbreak.cloud.task.PollTask;
+import com.sequenceiq.cloudbreak.cloud.template.compute.ComputeResourceService;
+import com.sequenceiq.cloudbreak.cloud.template.context.ResourceBuilderContext;
 import com.sequenceiq.cloudbreak.common.type.ResourceType;
 
 @Service
@@ -97,6 +102,15 @@ public class AwsResourceLaunchService {
 
     @Inject
     private AwsTagPreparationService awsTagPreparationService;
+
+    @Inject
+    private AwsContextBuilder contextBuilder;
+
+    @Inject
+    private ComputeResourceService computeResourceService;
+
+    @Inject
+    private AwsResourceConnector awsResourceConnector;
 
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
             AdjustmentType adjustmentType, Long threshold) throws Exception {
@@ -162,13 +176,37 @@ public class AwsResourceLaunchService {
         }
 
         buildComputeResourcesForLaunch(ac, stack, adjustmentType, threshold, instances);
-        return check(ac, instances);
+        return awsResourceConnector.check(ac, instances);
 
     }
 
+    private List<CloudResourceStatus> buildComputeResourcesForLaunch(AuthenticatedContext ac, CloudStack stack, AdjustmentType adjustmentType, Long threshold,
+            List<CloudResource> instances) {
+        CloudContext cloudContext = ac.getCloudContext();
+        ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
+
+        addInstancesToContext(instances, context, stack.getGroups());
+        return computeResourceService.buildResourcesForLaunch(context, ac, stack, adjustmentType, threshold);
+    }
+
+    // TODO remove duplication
+    private void addInstancesToContext(List<CloudResource> instances, ResourceBuilderContext context, List<Group> groups) {
+        groups.forEach(group -> {
+            List<Long> ids = group.getInstances().stream()
+                    .filter(instance -> Objects.isNull(instance.getInstanceId()))
+                    .map(CloudInstance::getTemplate).map(InstanceTemplate::getPrivateId).collect(Collectors.toList());
+            List<CloudResource> groupInstances = instances.stream().filter(inst -> inst.getGroup().equals(group.getName())).collect(Collectors.toList());
+            for (int i = 0; i < ids.size(); i++) {
+                context.addComputeResources(ids.get(i), List.of(groupInstances.get(i)));
+            }
+        });
+    }
+
+
     private void associatePublicIpsToGatewayInstances(CloudStack stack, String cFStackName, AmazonCloudFormationRetryClient cfRetryClient,
             AmazonEC2Client amazonEC2Client, List<CloudResource> instances) {
-        Map<String, String> eipAllocationIds = getElasticIpAllocationIds(cFStackName, cfRetryClient);
+        Map<String, String> eipAllocationIds =
+                awsNetworkService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
         List<Group> gateways = getGatewayGroups(stack.getGroups());
         Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
                 .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
@@ -177,10 +215,14 @@ public class AwsResourceLaunchService {
                         instance -> List.of(instance.getInstanceId()),
                         (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
         for (Group gateway : gateways) {
-            List<String> eips = getEipsForGatewayGroup(eipAllocationIds, gateway);
+            List<String> eips = awsNetworkService.getEipsForGatewayGroup(eipAllocationIds, gateway);
             List<String> instanceIds = gatewayGroupInstanceMapping.get(gateway.getName());
-            associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
+            awsNetworkService.associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
         }
+    }
+
+    private List<Group> getGatewayGroups(Collection<Group> groups) {
+        return groups.stream().filter(group -> group.getType() == InstanceGroupType.GATEWAY).collect(Collectors.toList());
     }
 
     private void createKeyPair(AuthenticatedContext ac, CloudStack stack) {
@@ -284,7 +326,7 @@ public class AwsResourceLaunchService {
     }
 
     private String getCreatedVpc(String cFStackName, AmazonCloudFormationRetryClient client) {
-        Map<String, String> outputs = getOutputs(cFStackName, client);
+        Map<String, String> outputs = cfStackUtil.getOutputs(cFStackName, client);
         if (outputs.containsKey(CREATED_VPC)) {
             return outputs.get(CREATED_VPC);
         } else {
@@ -294,7 +336,7 @@ public class AwsResourceLaunchService {
     }
 
     private String getCreatedSubnet(String cFStackName, AmazonCloudFormationRetryClient client) {
-        Map<String, String> outputs = getOutputs(cFStackName, client);
+        Map<String, String> outputs = cfStackUtil.getOutputs(cFStackName, client);
         if (outputs.containsKey(CREATED_SUBNET)) {
             return outputs.get(CREATED_SUBNET);
         } else {
@@ -334,19 +376,6 @@ public class AwsResourceLaunchService {
         }
     }
 
-    // TODO remove triplication
-    private Map<String, String> getOutputs(String cFStackName, AmazonCloudFormationRetryClient client) {
-        DescribeStacksRequest describeStacksRequest = new DescribeStacksRequest().withStackName(cFStackName);
-        String outputNotFound = String.format("Couldn't get Cloudformation stack's('%s') output", cFStackName);
-        List<Output> cfStackOutputs = client.describeStacks(describeStacksRequest).getStacks()
-                .stream().findFirst().orElseThrow(getCloudConnectorExceptionSupplier(outputNotFound)).getOutputs();
-        return cfStackOutputs.stream().collect(Collectors.toMap(Output::getOutputKey, Output::getOutputValue));
-    }
-
-    private Supplier<CloudConnectorException> getCloudConnectorExceptionSupplier(String msg) {
-        return () -> new CloudConnectorException(msg);
-    }
-
     // TODO remove duplication
     private void scheduleStatusChecks(CloudStack stack, AuthenticatedContext ac, AmazonCloudFormationRetryClient cloudFormationClient) {
         for (Group group : stack.getGroups()) {
@@ -361,6 +390,4 @@ public class AwsResourceLaunchService {
             }
         }
     }
-
-
 }

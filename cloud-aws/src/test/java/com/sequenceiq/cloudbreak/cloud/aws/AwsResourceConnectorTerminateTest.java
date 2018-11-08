@@ -1,6 +1,7 @@
 package com.sequenceiq.cloudbreak.cloud.aws;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,6 +91,12 @@ public class AwsResourceConnectorTerminateTest {
     @Mock
     private ComputeResourceService computeResourceService;
 
+    @Mock
+    private CloudFormationStackUtil cfStackUtil;
+
+    @Mock
+    private AwsNetworkService awsNetworkService;
+
     @Test
     public void testTerminateShouldNotCleanupEncryptedResourcesWhenNoResourcesExist() {
 
@@ -115,9 +122,9 @@ public class AwsResourceConnectorTerminateTest {
 
     @Test
     public void testTerminateShouldCleanupEncryptedResourcesWhenCloudformationStackDoesNotExist() throws Exception {
-        when(awsClient.createCloudFormationClient(any(), any())).thenReturn(cloudFormationClient);
         when(awsClient.createCloudFormationRetryClient(any(), any())).thenReturn(cloudFormationRetryClient);
         when(awsClient.createAccess(any(), any())).thenReturn(ec2Client);
+        when(cfStackUtil.getCloudFormationStackResource(any())).thenReturn(null);
 
         List<CloudResource> resources = List.of(new Builder().name("ami-87654321").type(ResourceType.AWS_ENCRYPTED_AMI).build(),
                 new Builder().name("snap-1234567812345678").type(ResourceType.AWS_SNAPSHOT).build(),
@@ -136,6 +143,9 @@ public class AwsResourceConnectorTerminateTest {
         when(awsClient.createCloudFormationRetryClient(any(), any())).thenReturn(cloudFormationRetryClient);
         when(awsClient.createAccess(any(), any())).thenReturn(ec2Client);
         when(awsPollTaskFactory.newAwsTerminateStackStatusCheckerTask(any(), any(), any(), any(), any(), any())).thenReturn(awsTerminateStackStatusCheckerTask);
+        CloudResource cfStackResource = mock(CloudResource.class);
+        when(cfStackResource.getName()).thenReturn("stackName");
+        when(cfStackUtil.getCloudFormationStackResource(any())).thenReturn(cfStackResource);
 
         List<CloudResource> resources = List.of(new Builder().name("ami-87654321").type(ResourceType.AWS_ENCRYPTED_AMI).build(),
                 new Builder().name("snap-1234567812345678").type(ResourceType.AWS_SNAPSHOT).build(),

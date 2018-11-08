@@ -25,7 +25,10 @@ import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsCredentialView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
+import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
+import com.sequenceiq.cloudbreak.common.type.CommonStatus;
+import com.sequenceiq.cloudbreak.common.type.ResourceType;
 
 @Service
 public class CloudFormationStackUtil {
@@ -59,6 +62,40 @@ public class CloudFormationStackUtil {
                 .withStackName(cFStackName)
                 .withLogicalResourceId(String.format("AmbariNodes%s", instanceGroup.replaceAll("_", ""))));
         return asGroupResource.getStackResourceDetail().getPhysicalResourceId();
+    }
+
+    public List<CloudResource> getInstanceCloudResources(AuthenticatedContext ac, AmazonCloudFormationRetryClient client,
+            AmazonAutoScalingRetryClient amazonASClient, List<Group> groups) {
+        Map<String, Group> groupNameMapping = groups.stream()
+                .collect(Collectors.toMap(
+                        group -> getAutoscalingGroupName(ac, client, group.getName()),
+                        group -> group
+                ));
+
+        Map<Group, List<String>> idsByGroups = getInstanceIdsByGroups(amazonASClient, groupNameMapping);
+        return idsByGroups.entrySet().stream()
+                .flatMap(entry -> {
+                    Group group = entry.getKey();
+                    return entry.getValue().stream()
+                            .map(id -> CloudResource.builder()
+                                    .type(ResourceType.AWS_INSTANCE)
+                                    .instanceId(id)
+                                    .name(id)
+                                    .group(group.getName())
+                                    .status(CommonStatus.CREATED)
+                                    .persistent(false)
+                                    .build());
+                })
+                .collect(Collectors.toList());
+    }
+
+    public CloudResource getCloudFormationStackResource(Iterable<CloudResource> cloudResources) {
+        for (CloudResource cloudResource : cloudResources) {
+            if (cloudResource.getType().equals(ResourceType.CLOUDFORMATION_STACK)) {
+                return cloudResource;
+            }
+        }
+        return null;
     }
 
     public String getCfStackName(AuthenticatedContext ac) {

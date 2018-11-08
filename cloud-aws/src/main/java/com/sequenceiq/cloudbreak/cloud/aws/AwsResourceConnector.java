@@ -12,11 +12,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,8 +27,6 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.net.util.SubnetUtils;
-import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -56,27 +52,14 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.StackStatus;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.amazonaws.services.ec2.model.Address;
 import com.amazonaws.services.ec2.model.AssociateAddressRequest;
 import com.amazonaws.services.ec2.model.DeleteKeyPairRequest;
-import com.amazonaws.services.ec2.model.DescribeAddressesRequest;
-import com.amazonaws.services.ec2.model.DescribeAddressesResult;
 import com.amazonaws.services.ec2.model.DescribeImagesRequest;
 import com.amazonaws.services.ec2.model.DescribeImagesResult;
 import com.amazonaws.services.ec2.model.DescribeKeyPairsRequest;
-import com.amazonaws.services.ec2.model.DescribeSubnetsRequest;
-import com.amazonaws.services.ec2.model.DescribeSubnetsResult;
-import com.amazonaws.services.ec2.model.DescribeVpcsRequest;
-import com.amazonaws.services.ec2.model.DisassociateAddressRequest;
-import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.Image;
 import com.amazonaws.services.ec2.model.ImportKeyPairRequest;
-import com.amazonaws.services.ec2.model.ReleaseAddressRequest;
-import com.amazonaws.services.ec2.model.Subnet;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.amazonaws.services.ec2.model.Vpc;
-import com.google.common.collect.Lists;
-import com.google.common.net.InetAddresses;
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
 import com.sequenceiq.cloudbreak.cloud.ResourceConnector;
@@ -111,7 +94,6 @@ import com.sequenceiq.cloudbreak.cloud.template.compute.ComputeResourceService;
 import com.sequenceiq.cloudbreak.cloud.template.context.ResourceBuilderContext;
 import com.sequenceiq.cloudbreak.cloud.transform.CloudResourceHelper;
 import com.sequenceiq.cloudbreak.common.type.CommonResourceType;
-import com.sequenceiq.cloudbreak.common.type.CommonStatus;
 import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.service.Retry;
 import com.sequenceiq.cloudbreak.service.Retry.ActionWentFailException;
@@ -123,10 +105,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AwsResourceConnector.class);
 
     private static final List<String> CAPABILITY_IAM = singletonList("CAPABILITY_IAM");
-
-    private static final int INCREMENT_HOST_NUM = 256;
-
-    private static final int CIDR_PREFIX = 24;
 
     private static final List<String> UPSCALE_PROCESSES = asList("Launch");
 
@@ -142,6 +120,9 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private static final String CREATED_VPC = "CreatedVpc";
 
     private static final String CREATED_SUBNET = "CreatedSubnet";
+
+    @Inject
+    private AwsNetworkService awsNetworkService;
 
     @Inject
     private Configuration freemarkerConfiguration;
@@ -195,9 +176,13 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     @Inject
     private ComputeResourceService computeResourceService;
 
+    @Inject
+    private AwsResourceLaunchService awsResourceLaunchService;
+
     @Override
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
             AdjustmentType adjustmentType, Long threshold) throws Exception {
+        awsResourceLaunchService.launch(ac, stack, resourceNotifier, adjustmentType, threshold);
         createKeyPair(ac, stack);
         String cFStackName = cfStackUtil.getCfStackName(ac);
         AwsCredentialView credentialView = new AwsCredentialView(ac.getCloudCredential());
@@ -207,7 +192,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         AwsNetworkView awsNetworkView = new AwsNetworkView(stack.getNetwork());
         boolean existingVPC = awsNetworkView.isExistingVPC();
         boolean existingSubnet = awsNetworkView.isExistingSubnet();
-        boolean mapPublicIpOnLaunch = isMapPublicOnLaunch(awsNetworkView, amazonEC2Client);
+        boolean mapPublicIpOnLaunch = awsNetworkService.isMapPublicOnLaunch(awsNetworkView, amazonEC2Client);
         try {
             cfRetryClient.describeStacks(new DescribeStacksRequest().withStackName(cFStackName));
             LOGGER.info("Stack already exists: {}", cFStackName);
@@ -216,14 +201,14 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             resourceNotifier.notifyAllocation(cloudFormationStack, ac.getCloudContext());
 
             String cidr = stack.getNetwork().getSubnet().getCidr();
-            String subnet = isNoCIDRProvided(existingVPC, existingSubnet, cidr) ? findNonOverLappingCIDR(ac, stack) : cidr;
+            String subnet = isNoCIDRProvided(existingVPC, existingSubnet, cidr) ? awsNetworkService.findNonOverLappingCIDR(ac, stack) : cidr;
             AwsInstanceProfileView awsInstanceProfileView = new AwsInstanceProfileView(stack);
             ModelContext modelContext = new ModelContext()
                     .withAuthenticatedContext(ac)
                     .withStack(stack)
                     .withExistingVpc(existingVPC)
                     .withExistingIGW(awsNetworkView.isExistingIGW())
-                    .withExistingSubnetCidr(existingSubnet ? getExistingSubnetCidr(ac, stack) : null)
+                    .withExistingSubnetCidr(existingSubnet ? awsNetworkService.getExistingSubnetCidr(ac, stack) : null)
                     .withExistingSubnetIds(existingSubnet ? awsNetworkView.getSubnetList() : null)
                     .mapPublicIpOnLaunch(mapPublicIpOnLaunch)
                     .withEnableInstanceProfile(awsInstanceProfileView.isInstanceProfileAvailable())
@@ -252,7 +237,8 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
         suspendAutoscalingGoupsWhenNewInstancesAreReady(ac, stack);
 
-        List<CloudResource> instances = getInstanceCloudResources(ac, cfRetryClient, amazonASClient, stack.getGroups());
+        List<CloudResource> instances =
+                cfStackUtil.getInstanceCloudResources(ac, cfRetryClient, amazonASClient, stack.getGroups());
 
         if (mapPublicIpOnLaunch) {
             associatePublicIpsToGatewayInstances(stack, cFStackName, cfRetryClient, amazonEC2Client, instances);
@@ -277,13 +263,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             List<String> instanceIds = gatewayGroupInstanceMapping.get(gateway.getName());
             associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
         }
-    }
-
-    private void suspendAutoscalingGoupsWhenNewInstancesAreReady(AuthenticatedContext ac, CloudStack stack) {
-        AmazonCloudFormationRetryClient cloudFormationClient = awsClient.createCloudFormationRetryClient(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        scheduleStatusChecks(stack, ac, cloudFormationClient);
-        suspendAutoScaling(ac, stack);
     }
 
     private List<CloudResourceStatus> buildComputeResourcesForLaunch(AuthenticatedContext ac, CloudStack stack, AdjustmentType adjustmentType, Long threshold,
@@ -336,106 +315,38 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         return computeResourceService.deleteResources(context, ac, cloudResources, false);
     }
 
-    private void createKeyPair(AuthenticatedContext ac, CloudStack stack) {
-        if (!awsClient.existingKeyPairNameSpecified(stack.getInstanceAuthentication())) {
-            AwsCredentialView awsCredential = new AwsCredentialView(ac.getCloudCredential());
-            try {
-                String region = ac.getCloudContext().getLocation().getRegion().value();
-                LOGGER.info("Importing public key to {} region on AWS", region);
-                AmazonEC2Client client = awsClient.createAccess(awsCredential, region);
-                String keyPairName = awsClient.getKeyPairName(ac);
-                ImportKeyPairRequest importKeyPairRequest = new ImportKeyPairRequest(keyPairName, stack.getInstanceAuthentication().getPublicKey());
-                try {
-                    client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames(keyPairName));
-                    LOGGER.info("Key-pair already exists: {}", keyPairName);
-                } catch (AmazonServiceException e) {
-                    client.importKeyPair(importKeyPairRequest);
-                }
-            } catch (Exception e) {
-                String errorMessage = String.format("Failed to import public key [roleArn:'%s'], detailed message: %s", awsCredential.getRoleArn(),
-                        e.getMessage());
-                LOGGER.error(errorMessage, e);
-                throw new CloudConnectorException(e.getMessage(), e);
-            }
-        }
-    }
 
-    private boolean isNoCIDRProvided(boolean existingVPC, boolean existingSubnet, String cidr) {
-        return existingVPC && !existingSubnet && cidr == null;
-    }
 
     private boolean deployingToSameVPC(AwsNetworkView awsNetworkView, boolean existingVPC) {
         return StringUtils.isNoneEmpty(cloudbreakVpc) && existingVPC && awsNetworkView.getExistingVPC().equals(cloudbreakVpc);
     }
 
-    private CreateStackRequest createCreateStackRequest(AuthenticatedContext ac, CloudStack stack, String cFStackName, String subnet, String cfTemplate) {
-        return new CreateStackRequest()
-                .withStackName(cFStackName)
-                .withOnFailure(OnFailure.DO_NOTHING)
-                .withTemplateBody(cfTemplate)
-                .withTags(awsTagPreparationService.prepareCloudformationTags(ac, stack.getTags()))
-                .withCapabilities(CAPABILITY_IAM)
-                .withParameters(getStackParameters(ac, stack, cFStackName, subnet));
-    }
 
-    private List<CloudResource> getInstanceCloudResources(AuthenticatedContext ac, AmazonCloudFormationRetryClient client,
-            AmazonAutoScalingRetryClient amazonASClient, List<Group> groups) {
-        Map<String, Group> groupNameMapping = groups.stream()
-                .collect(Collectors.toMap(
-                        group -> cfStackUtil.getAutoscalingGroupName(ac, client, group.getName()),
-                        group -> group
-                ));
+//    private List<CloudResource> getInstanceCloudResources(AuthenticatedContext ac, AmazonCloudFormationRetryClient client,
+//            AmazonAutoScalingRetryClient amazonASClient, List<Group> groups) {
+//        Map<String, Group> groupNameMapping = groups.stream()
+//                .collect(Collectors.toMap(
+//                        group -> cfStackUtil.getAutoscalingGroupName(ac, client, group.getName()),
+//                        group -> group
+//                ));
+//
+//        Map<Group, List<String>> idsByGroups = cfStackUtil.getInstanceIdsByGroups(amazonASClient, groupNameMapping);
+//        return idsByGroups.entrySet().stream()
+//                .flatMap(entry -> {
+//                    Group group = entry.getKey();
+//                    return entry.getValue().stream()
+//                            .map(id -> CloudResource.builder()
+//                                    .type(ResourceType.AWS_INSTANCE)
+//                                    .instanceId(id)
+//                                    .name(id)
+//                                    .group(group.getName())
+//                                    .status(CommonStatus.CREATED)
+//                                    .persistent(false)
+//                                    .build());
+//                })
+//                .collect(Collectors.toList());
+//    }
 
-        Map<Group, List<String>> idsByGroups = cfStackUtil.getInstanceIdsByGroups(amazonASClient, groupNameMapping);
-        return idsByGroups.entrySet().stream()
-                .flatMap(entry -> {
-                    Group group = entry.getKey();
-                    return entry.getValue().stream()
-                            .map(id -> CloudResource.builder()
-                                    .type(ResourceType.AWS_INSTANCE)
-                                    .instanceId(id)
-                                    .name(id)
-                                    .group(group.getName())
-                                    .status(CommonStatus.CREATED)
-                                    .persistent(false)
-                                    .build());
-                })
-                .collect(Collectors.toList());
-    }
-
-    private void saveGeneratedSubnet(AuthenticatedContext ac, CloudStack stack, String cFStackName, AmazonCloudFormationRetryClient client,
-            PersistenceNotifier resourceNotifier) {
-        AwsNetworkView awsNetworkView = new AwsNetworkView(stack.getNetwork());
-        if (awsNetworkView.isExistingVPC()) {
-            String vpcId = awsNetworkView.getExistingVPC();
-            CloudResource vpc = new Builder().type(ResourceType.AWS_VPC).name(vpcId).build();
-            resourceNotifier.notifyAllocation(vpc, ac.getCloudContext());
-        } else {
-            String vpcId = getCreatedVpc(cFStackName, client);
-            CloudResource vpc = new Builder().type(ResourceType.AWS_VPC).name(vpcId).build();
-            resourceNotifier.notifyAllocation(vpc, ac.getCloudContext());
-        }
-
-        if (awsNetworkView.isExistingSubnet()) {
-            String subnetId = awsNetworkView.getExistingSubnet();
-            CloudResource subnet = new Builder().type(ResourceType.AWS_SUBNET).name(subnetId).build();
-            resourceNotifier.notifyAllocation(subnet, ac.getCloudContext());
-        } else {
-            String subnetId = getCreatedSubnet(cFStackName, client);
-            CloudResource subnet = new Builder().type(ResourceType.AWS_SUBNET).name(subnetId).build();
-            resourceNotifier.notifyAllocation(subnet, ac.getCloudContext());
-        }
-    }
-
-    private String getCreatedVpc(String cFStackName, AmazonCloudFormationRetryClient client) {
-        Map<String, String> outputs = getOutputs(cFStackName, client);
-        if (outputs.containsKey(CREATED_VPC)) {
-            return outputs.get(CREATED_VPC);
-        } else {
-            String outputKeyNotFound = String.format("Vpc could not be found in the Cloudformation stack('%s') output.", cFStackName);
-            throw new CloudConnectorException(outputKeyNotFound);
-        }
-    }
 
     private String getCreatedSubnet(String cFStackName, AmazonCloudFormationRetryClient client) {
         Map<String, String> outputs = getOutputs(cFStackName, client);
@@ -513,74 +424,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         }
     }
 
-    private Collection<Parameter> getStackParameters(AuthenticatedContext ac, CloudStack stack, String stackName, String newSubnetCidr) {
-        AwsNetworkView awsNetworkView = new AwsNetworkView(stack.getNetwork());
-        AwsInstanceProfileView awsInstanceProfileView = new AwsInstanceProfileView(stack);
-        String keyPairName = awsClient.getKeyPairName(ac);
-        if (awsClient.existingKeyPairNameSpecified(stack.getInstanceAuthentication())) {
-            keyPairName = awsClient.getExistingKeyPairName(stack.getInstanceAuthentication());
-        }
-
-        Collection<Parameter> parameters = new ArrayList<>(asList(
-                new Parameter().withParameterKey("CBUserData").withParameterValue(stack.getImage().getUserDataByType(InstanceGroupType.CORE)),
-                new Parameter().withParameterKey("CBGateWayUserData").withParameterValue(stack.getImage().getUserDataByType(InstanceGroupType.GATEWAY)),
-                new Parameter().withParameterKey("StackName").withParameterValue(stackName),
-                new Parameter().withParameterKey("StackOwner").withParameterValue(ac.getCloudContext().getOwner()),
-                new Parameter().withParameterKey("KeyName").withParameterValue(keyPairName),
-                new Parameter().withParameterKey("AMI").withParameterValue(stack.getImage().getImageName()),
-                new Parameter().withParameterKey("RootDeviceName").withParameterValue(getRootDeviceName(ac, stack))
-        ));
-        if (awsInstanceProfileView.isInstanceProfileAvailable()) {
-            parameters.add(new Parameter().withParameterKey("InstanceProfile").withParameterValue(awsInstanceProfileView.getInstanceProfile()));
-        }
-        if (ac.getCloudContext().getLocation().getAvailabilityZone().value() != null) {
-            parameters.add(new Parameter().withParameterKey("AvailabilitySet")
-                    .withParameterValue(ac.getCloudContext().getLocation().getAvailabilityZone().value()));
-        }
-        if (awsNetworkView.isExistingVPC()) {
-            parameters.add(new Parameter().withParameterKey("VPCId").withParameterValue(awsNetworkView.getExistingVPC()));
-            if (awsNetworkView.isExistingIGW()) {
-                parameters.add(new Parameter().withParameterKey("InternetGatewayId").withParameterValue(awsNetworkView.getExistingIGW()));
-            }
-            if (awsNetworkView.isExistingSubnet()) {
-                parameters.add(new Parameter().withParameterKey("SubnetId").withParameterValue(awsNetworkView.getExistingSubnet()));
-            } else {
-                parameters.add(new Parameter().withParameterKey("SubnetCIDR").withParameterValue(newSubnetCidr));
-            }
-        }
-        return parameters;
-    }
-
-    private List<String> getExistingSubnetCidr(AuthenticatedContext ac, CloudStack stack) {
-        AwsNetworkView awsNetworkView = new AwsNetworkView(stack.getNetwork());
-        String region = ac.getCloudContext().getLocation().getRegion().value();
-        AmazonEC2Client ec2Client = awsClient.createAccess(new AwsCredentialView(ac.getCloudCredential()), region);
-        DescribeSubnetsRequest subnetsRequest = new DescribeSubnetsRequest().withSubnetIds(awsNetworkView.getSubnetList());
-        List<Subnet> subnets = ec2Client.describeSubnets(subnetsRequest).getSubnets();
-        if (subnets.isEmpty()) {
-            throw new CloudConnectorException("The specified subnet does not exist (maybe it's in a different region).");
-        }
-        List<String> cidrs = Lists.newArrayList();
-        for (Subnet subnet : subnets) {
-            cidrs.add(subnet.getCidrBlock());
-        }
-        return cidrs;
-    }
-
-    private String getRootDeviceName(AuthenticatedContext ac, CloudStack cloudStack) {
-        AmazonEC2Client ec2Client = awsClient.createAccess(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        DescribeImagesResult images = ec2Client.describeImages(new DescribeImagesRequest().withImageIds(cloudStack.getImage().getImageName()));
-        if (images.getImages().isEmpty()) {
-            throw new CloudConnectorException(String.format("AMI is not available: '%s'.", cloudStack.getImage().getImageName()));
-        }
-        Image image = images.getImages().get(0);
-        if (image == null) {
-            throw new CloudConnectorException(String.format("Couldn't describe AMI '%s'.", cloudStack.getImage().getImageName()));
-        }
-        return image.getRootDeviceName();
-    }
-
     @Override
     public List<CloudResourceStatus> check(AuthenticatedContext authenticatedContext, List<CloudResource> resources) {
         return new ArrayList<>();
@@ -595,7 +438,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             deleteComputeResources(ac, stack, resources);
 
             AmazonCloudFormationRetryClient cfRetryClient = awsClient.createCloudFormationRetryClient(credentialView, regionName);
-            CloudResource stackResource = getCloudFormationStackResource(resources);
+            CloudResource stackResource = cfStackUtil.getCloudFormationStackResource(resources);
             AmazonEC2Client amazonEC2Client = awsClient.createAccess(credentialView, regionName);
             if (stackResource == null) {
                 cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
@@ -618,7 +461,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
                 });
             } catch (ActionWentFailException ignored) {
                 LOGGER.info("Stack not found with name: {}", cFStackName);
-                releaseReservedIp(amazonEC2Client, resources);
+                awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
                 cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
                 return Collections.emptyList();
             }
@@ -634,13 +477,13 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             } catch (Exception e) {
                 throw new CloudConnectorException(e.getMessage(), e);
             }
-            releaseReservedIp(amazonEC2Client, resources);
+            awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
             cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
             deleteKeyPair(ac, stack);
             deleteLaunchConfiguration(resources, ac);
         } else if (resources != null) {
             AmazonEC2Client amazonEC2Client = awsClient.createAccess(credentialView, regionName);
-            releaseReservedIp(amazonEC2Client, resources);
+            awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
             LOGGER.info("No CloudFormation stack saved for stack.");
         } else {
             LOGGER.info("No resources to release.");
@@ -708,29 +551,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         }
     }
 
-    private void releaseReservedIp(AmazonEC2 client, Iterable<CloudResource> resources) {
-        CloudResource elasticIpResource = getReservedIp(resources);
-        if (elasticIpResource != null && elasticIpResource.getName() != null) {
-            Address address;
-            try {
-                DescribeAddressesResult describeResult = client.describeAddresses(
-                        new DescribeAddressesRequest().withAllocationIds(elasticIpResource.getName()));
-                address = describeResult.getAddresses().get(0);
-            } catch (AmazonServiceException e) {
-                if (e.getErrorMessage().equals("The allocation ID '" + elasticIpResource.getName() + "' does not exist")) {
-                    LOGGER.warn("Elastic IP with allocation ID '{}' not found. Ignoring IP release.", elasticIpResource.getName());
-                    return;
-                } else {
-                    throw e;
-                }
-            }
-            if (address.getAssociationId() != null) {
-                client.disassociateAddress(new DisassociateAddressRequest().withAssociationId(elasticIpResource.getName()));
-            }
-            client.releaseAddress(new ReleaseAddressRequest().withAllocationId(elasticIpResource.getName()));
-        }
-    }
-
     @Override
     public List<CloudResourceStatus> update(AuthenticatedContext authenticatedContext, CloudStack stack, List<CloudResource> resources) {
         ArrayList<CloudResourceStatus> cloudResourceStatuses = new ArrayList<>();
@@ -774,9 +594,10 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         scheduleStatusChecks(stack, ac, cloudFormationClient);
         suspendAutoScaling(ac, stack);
 
-        List<CloudResource> instances = getInstanceCloudResources(ac, cloudFormationClient, amazonASClient, scaledGroups);
+        List<CloudResource> instances =
+                cfStackUtil.getInstanceCloudResources(ac, cloudFormationClient, amazonASClient, scaledGroups);
 
-        boolean mapPublicIpOnLaunch = isMapPublicOnLaunch(new AwsNetworkView(stack.getNetwork()), amazonEC2Client);
+        boolean mapPublicIpOnLaunch = awsNetworkService.isMapPublicOnLaunch(new AwsNetworkView(stack.getNetwork()), amazonEC2Client);
         List<Group> gateways = getGatewayGroups(scaledGroups);
         Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
                 .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
@@ -789,11 +610,11 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
                         instance -> List.of(instance.getInstanceId()),
                         (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
         if (mapPublicIpOnLaunch && !gateways.isEmpty()) {
-            String cFStackName = getCloudFormationStackResource(resources).getName();
+            String cFStackName = cfStackUtil.getCloudFormationStackResource(resources).getName();
             Map<String, String> eipAllocationIds = getElasticIpAllocationIds(cFStackName, cloudFormationClient);
             for (Group gateway : gateways) {
                 List<String> eips = getEipsForGatewayGroup(eipAllocationIds, gateway);
-                List<String> freeEips = getFreeIps(eips, amazonEC2Client);
+                List<String> freeEips = awsNetworkService.getFreeIps(eips, amazonEC2Client);
                 List<String> newInstances = gatewayGroupInstanceMapping.get(gateway.getName());
                 associateElasticIpsToInstances(amazonEC2Client, freeEips, newInstances);
             }
@@ -801,7 +622,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
         buildComputeResourcesForUpscale(ac, stack, scaledGroups, instances);
 
-        return singletonList(new CloudResourceStatus(getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
+        return singletonList(new CloudResourceStatus(cfStackUtil.getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
     }
 
     @Override
@@ -910,25 +731,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         return groups.stream().filter(group -> group.getType() == InstanceGroupType.GATEWAY).collect(Collectors.toList());
     }
 
-    private List<String> getFreeIps(Collection<String> eips, AmazonEC2 amazonEC2Client) {
-        DescribeAddressesResult addresses = amazonEC2Client.describeAddresses(new DescribeAddressesRequest().withAllocationIds(eips));
-        return addresses.getAddresses().stream().filter(address -> address.getInstanceId() == null)
-                .map(Address::getAllocationId).collect(Collectors.toList());
-    }
-
-    private boolean isMapPublicOnLaunch(AwsNetworkView awsNetworkView, AmazonEC2 amazonEC2Client) {
-        boolean mapPublicIpOnLaunch = true;
-        if (awsNetworkView.isExistingVPC() && awsNetworkView.isExistingSubnet()) {
-            DescribeSubnetsRequest describeSubnetsRequest = new DescribeSubnetsRequest();
-            describeSubnetsRequest.setSubnetIds(awsNetworkView.getSubnetList());
-            DescribeSubnetsResult describeSubnetsResult = amazonEC2Client.describeSubnets(describeSubnetsRequest);
-            if (!describeSubnetsResult.getSubnets().isEmpty()) {
-                mapPublicIpOnLaunch = describeSubnetsResult.getSubnets().get(0).isMapPublicIpOnLaunch();
-            }
-        }
-        return mapPublicIpOnLaunch;
-    }
-
     private void scheduleStatusChecks(CloudStack stack, AuthenticatedContext ac, AmazonCloudFormationRetryClient cloudFormationClient) {
         for (Group group : stack.getGroups()) {
             String asGroupName = cfStackUtil.getAutoscalingGroupName(ac, cloudFormationClient, group.getName());
@@ -941,136 +743,5 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
                 throw new CloudConnectorException(e.getMessage(), e);
             }
         }
-    }
-
-    private CloudResource getCloudFormationStackResource(Iterable<CloudResource> cloudResources) {
-        for (CloudResource cloudResource : cloudResources) {
-            if (cloudResource.getType().equals(ResourceType.CLOUDFORMATION_STACK)) {
-                return cloudResource;
-            }
-        }
-        return null;
-    }
-
-    private CloudResource getReservedIp(Iterable<CloudResource> cloudResources) {
-        for (CloudResource cloudResource : cloudResources) {
-            if (cloudResource.getType().equals(ResourceType.AWS_RESERVED_IP)) {
-                return cloudResource;
-            }
-        }
-        return null;
-    }
-
-    protected String findNonOverLappingCIDR(AuthenticatedContext ac, CloudStack stack) {
-        AwsNetworkView awsNetworkView = new AwsNetworkView(stack.getNetwork());
-        String region = ac.getCloudContext().getLocation().getRegion().value();
-        AmazonEC2Client ec2Client = awsClient.createAccess(new AwsCredentialView(ac.getCloudCredential()), region);
-
-        DescribeVpcsRequest vpcRequest = new DescribeVpcsRequest().withVpcIds(awsNetworkView.getExistingVPC());
-        Vpc vpc = ec2Client.describeVpcs(vpcRequest).getVpcs().get(0);
-        String vpcCidr = vpc.getCidrBlock();
-        LOGGER.info("Subnet cidr is empty, find a non-overlapping subnet for VPC cidr: {}", vpcCidr);
-
-        DescribeSubnetsRequest request = new DescribeSubnetsRequest().withFilters(new Filter("vpc-id", singletonList(awsNetworkView.getExistingVPC())));
-        List<Subnet> awsSubnets = ec2Client.describeSubnets(request).getSubnets();
-        List<String> subnetCidrs = awsSubnets.stream().map(Subnet::getCidrBlock).collect(Collectors.toList());
-        LOGGER.info("The selected VPCs: {}, has the following subnets: {}", vpc.getVpcId(), subnetCidrs.stream().collect(Collectors.joining(",")));
-
-        return calculateSubnet(ac.getCloudContext().getName(), vpc, subnetCidrs);
-    }
-
-    private String calculateSubnet(String stackName, Vpc vpc, Iterable<String> subnetCidrs) {
-        SubnetInfo vpcInfo = new SubnetUtils(vpc.getCidrBlock()).getInfo();
-        String[] cidrParts = vpcInfo.getCidrSignature().split("/");
-        int netmask = Integer.parseInt(cidrParts[cidrParts.length - 1]);
-        int netmaskBits = CIDR_PREFIX - netmask;
-        if (netmaskBits <= 0) {
-            throw new CloudConnectorException("The selected VPC has to be in a bigger CIDR range than /24");
-        }
-        int numberOfSubnets = Double.valueOf(Math.pow(2, netmaskBits)).intValue();
-        int targetSubnet = 0;
-        if (stackName != null) {
-            byte[] b = stackName.getBytes(Charset.forName("UTF-8"));
-            for (byte ascii : b) {
-                targetSubnet += ascii;
-            }
-        }
-        targetSubnet = Long.valueOf(targetSubnet % numberOfSubnets).intValue();
-        String cidr = getSubnetCidrInRange(vpc, subnetCidrs, targetSubnet, numberOfSubnets);
-        if (cidr == null) {
-            cidr = getSubnetCidrInRange(vpc, subnetCidrs, 0, targetSubnet);
-        }
-        if (cidr == null) {
-            throw new CloudConnectorException("Cannot find non-overlapping CIDR range");
-        }
-        return cidr;
-    }
-
-    private String getSubnetCidrInRange(Vpc vpc, Iterable<String> subnetCidrs, int start, int end) {
-        SubnetInfo vpcInfo = new SubnetUtils(vpc.getCidrBlock()).getInfo();
-        String lowProbe = incrementIp(vpcInfo.getLowAddress());
-        String highProbe = new SubnetUtils(toSubnetCidr(lowProbe)).getInfo().getHighAddress();
-        // start from the target subnet
-        for (int i = 0; i < start - 1; i++) {
-            lowProbe = incrementIp(lowProbe);
-            highProbe = incrementIp(highProbe);
-        }
-        boolean foundProbe = false;
-        for (int i = start; i < end; i++) {
-            boolean overlapping = false;
-            for (String subnetCidr : subnetCidrs) {
-                SubnetInfo subnetInfo = new SubnetUtils(subnetCidr).getInfo();
-                if (isInRange(lowProbe, subnetInfo) || isInRange(highProbe, subnetInfo)) {
-                    overlapping = true;
-                    break;
-                }
-            }
-            if (overlapping) {
-                lowProbe = incrementIp(lowProbe);
-                highProbe = incrementIp(highProbe);
-            } else {
-                foundProbe = true;
-                break;
-            }
-        }
-        if (foundProbe && isInRange(highProbe, vpcInfo)) {
-            String subnet = toSubnetCidr(lowProbe);
-            LOGGER.info("The following subnet cidr found: {} for VPC: {}", subnet, vpc.getVpcId());
-            return subnet;
-        } else {
-            return null;
-        }
-    }
-
-    private String toSubnetCidr(String ip) {
-        int ipValue = InetAddresses.coerceToInteger(InetAddresses.forString(ip)) - 1;
-        return InetAddresses.fromInteger(ipValue).getHostAddress() + "/24";
-    }
-
-    private String incrementIp(String ip) {
-        int ipValue = InetAddresses.coerceToInteger(InetAddresses.forString(ip)) + INCREMENT_HOST_NUM;
-        return InetAddresses.fromInteger(ipValue).getHostAddress();
-    }
-
-    private boolean isInRange(String address, SubnetInfo subnetInfo) {
-        int low = InetAddresses.coerceToInteger(InetAddresses.forString(subnetInfo.getLowAddress()));
-        int high = InetAddresses.coerceToInteger(InetAddresses.forString(subnetInfo.getHighAddress()));
-        int currentAddress = InetAddresses.coerceToInteger(InetAddresses.forString(address));
-        return low <= currentAddress && currentAddress <= high;
-    }
-
-    private Map<String, String> getEbsSnapshotIdIfNeeded(AuthenticatedContext ac, CloudStack cloudStack, PersistenceNotifier resourceNotifier) {
-        Map<String, String> snapshotIdMap = new HashMap<>();
-        for (Group group : cloudStack.getGroups()) {
-            if (encryptedSnapshotService.isEncryptedVolumeRequested(group)) {
-                Optional<String> snapshot = encryptedSnapshotService.createSnapshotIfNeeded(ac, cloudStack, group, resourceNotifier);
-                if (snapshot.isPresent()) {
-                    snapshotIdMap.put(group.getName(), snapshot.orElse(null));
-                } else {
-                    throw new CloudConnectorException(String.format("Failed to create Ebs encrypted volume on stack: %s", ac.getCloudContext().getId()));
-                }
-            }
-        }
-        return snapshotIdMap;
     }
 }

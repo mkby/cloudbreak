@@ -40,7 +40,7 @@ import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.service.Retry;
 
 @RunWith(MockitoJUnitRunner.class)
-public class AwsResourceConnectorTerminateTest {
+public class AwsTerminateServiceTest {
 
     private static final String USER_ID = "horton@hortonworks.com";
 
@@ -50,7 +50,7 @@ public class AwsResourceConnectorTerminateTest {
     public final ExpectedException thrown = ExpectedException.none();
 
     @InjectMocks
-    private AwsResourceConnector underTest;
+    private AwsTerminateService underTest;
 
     @Mock
     private AwsClient awsClient;
@@ -96,6 +96,13 @@ public class AwsResourceConnectorTerminateTest {
 
     @Mock
     private AwsNetworkService awsNetworkService;
+
+    @Mock
+    private ComputeResourceServiceAdapter computeResourceServiceAdapter;
+
+    @Mock
+    private AwsResourceConnector awsResourceConnector;
+
 
     @Test
     public void testTerminateShouldNotCleanupEncryptedResourcesWhenNoResourcesExist() {

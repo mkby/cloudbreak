@@ -1,11 +1,5 @@
 package com.sequenceiq.cloudbreak.cloud.aws;
 
-import static com.amazonaws.services.cloudformation.model.StackStatus.CREATE_FAILED;
-import static com.amazonaws.services.cloudformation.model.StackStatus.DELETE_COMPLETE;
-import static com.amazonaws.services.cloudformation.model.StackStatus.DELETE_FAILED;
-import static com.amazonaws.services.cloudformation.model.StackStatus.ROLLBACK_COMPLETE;
-import static com.amazonaws.services.cloudformation.model.StackStatus.ROLLBACK_FAILED;
-import static com.amazonaws.services.cloudformation.model.StackStatus.ROLLBACK_IN_PROGRESS;
 import static com.sequenceiq.cloudbreak.cloud.aws.AwsInstanceConnector.INSTANCE_NOT_FOUND_ERROR_CODE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -13,7 +7,6 @@ import static java.util.Collections.singletonList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,20 +25,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
-import com.amazonaws.services.autoscaling.model.AutoScalingGroup;
-import com.amazonaws.services.autoscaling.model.DeleteLaunchConfigurationRequest;
-import com.amazonaws.services.autoscaling.model.DescribeAutoScalingGroupsRequest;
 import com.amazonaws.services.autoscaling.model.DetachInstancesRequest;
 import com.amazonaws.services.autoscaling.model.ResumeProcessesRequest;
 import com.amazonaws.services.autoscaling.model.SuspendProcessesRequest;
 import com.amazonaws.services.autoscaling.model.UpdateAutoScalingGroupRequest;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.model.DeleteStackRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.StackStatus;
 import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.amazonaws.services.ec2.model.DeleteKeyPairRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.cloud.ResourceConnector;
@@ -79,7 +63,6 @@ import com.sequenceiq.cloudbreak.cloud.transform.CloudResourceHelper;
 import com.sequenceiq.cloudbreak.common.type.CommonResourceType;
 import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.service.Retry;
-import com.sequenceiq.cloudbreak.service.Retry.ActionWentFailException;
 
 import freemarker.template.Configuration;
 
@@ -94,7 +77,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private static final List<String> SUSPENDED_PROCESSES = asList("Launch", "HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification",
             "ScheduledActions", "AddToLoadBalancer", "RemoveFromLoadBalancerLowPriority");
 
-    private static final List<StackStatus> ERROR_STATUSES = asList(CREATE_FAILED, ROLLBACK_IN_PROGRESS, ROLLBACK_FAILED, ROLLBACK_COMPLETE, DELETE_FAILED);
+//    private static final List<StackStatus> ERROR_STATUSES = asList(CREATE_FAILED, ROLLBACK_IN_PROGRESS, ROLLBACK_FAILED, ROLLBACK_COMPLETE, DELETE_FAILED);
 
     private static final String CFS_OUTPUT_EIPALLOCATION_ID = "EIPAllocationID";
 
@@ -157,10 +140,16 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private AwsContextBuilder contextBuilder;
 
     @Inject
+    private ComputeResourceServiceAdapter computeResourceServiceAdapter;
+
+    @Inject
     private ComputeResourceService computeResourceService;
 
     @Inject
     private AwsResourceLaunchService awsResourceLaunchService;
+
+    @Inject
+    private AwsTerminateService awsTerminateService;
 
     @Override
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
@@ -262,124 +251,12 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
     @Override
     public List<CloudResourceStatus> terminate(AuthenticatedContext ac, CloudStack stack, List<CloudResource> resources) {
-        LOGGER.info("Deleting stack: {}", ac.getCloudContext().getId());
-        AwsCredentialView credentialView = new AwsCredentialView(ac.getCloudCredential());
-        String regionName = ac.getCloudContext().getLocation().getRegion().value();
-        if (resources != null && !resources.isEmpty()) {
-            deleteComputeResources(ac, stack, resources);
-
-            AmazonCloudFormationRetryClient cfRetryClient = awsClient.createCloudFormationRetryClient(credentialView, regionName);
-            CloudResource stackResource = cfStackUtil.getCloudFormationStackResource(resources);
-            AmazonEC2Client amazonEC2Client = awsClient.createAccess(credentialView, regionName);
-            if (stackResource == null) {
-                cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
-                return Collections.emptyList();
-            }
-            String cFStackName = stackResource.getName();
-            LOGGER.info("Deleting CloudFormation stack for stack: {} [cf stack id: {}]", cFStackName, ac.getCloudContext().getId());
-            DescribeStacksRequest describeStacksRequest = new DescribeStacksRequest().withStackName(cFStackName);
-            try {
-                retryService.testWith2SecDelayMax15Times(() -> {
-                    try {
-                        cfRetryClient.describeStacks(describeStacksRequest);
-                    } catch (AmazonServiceException e) {
-                        if (!e.getErrorMessage().contains(cFStackName + " does not exist")) {
-                            throw e;
-                        }
-                        throw new ActionWentFailException("Stack not exists");
-                    }
-                    return Boolean.TRUE;
-                });
-            } catch (ActionWentFailException ignored) {
-                LOGGER.info("Stack not found with name: {}", cFStackName);
-                awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
-                cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
-                return Collections.emptyList();
-            }
-            resumeAutoScalingPolicies(ac, stack);
-            DeleteStackRequest deleteStackRequest = new DeleteStackRequest().withStackName(cFStackName);
-            cfRetryClient.deleteStack(deleteStackRequest);
-
-            AmazonCloudFormationClient cfClient = awsClient.createCloudFormationClient(credentialView, regionName);
-            PollTask<Boolean> task = awsPollTaskFactory.newAwsTerminateStackStatusCheckerTask(ac, cfClient, DELETE_COMPLETE, DELETE_FAILED, ERROR_STATUSES,
-                    cFStackName);
-            try {
-                awsBackoffSyncPollingScheduler.schedule(task);
-            } catch (Exception e) {
-                throw new CloudConnectorException(e.getMessage(), e);
-            }
-            awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
-            cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
-            deleteKeyPair(ac, stack);
-            deleteLaunchConfiguration(resources, ac);
-        } else if (resources != null) {
-            AmazonEC2Client amazonEC2Client = awsClient.createAccess(credentialView, regionName);
-            awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
-            LOGGER.info("No CloudFormation stack saved for stack.");
-        } else {
-            LOGGER.info("No resources to release.");
-        }
-        return check(ac, resources);
+        return awsTerminateService.terminate(ac, stack, resources);
     }
 
     private void cleanupEncryptedResources(AuthenticatedContext ac, List<CloudResource> resources, String regionName, AmazonEC2Client amazonEC2Client) {
         encryptedSnapshotService.deleteResources(ac, amazonEC2Client, resources);
         encryptedImageCopyService.deleteResources(regionName, amazonEC2Client, resources);
-    }
-
-    private void deleteLaunchConfiguration(List<CloudResource> resources, AuthenticatedContext ac) {
-        AmazonAutoScalingClient autoScalingClient = awsClient.createAutoScalingClient(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        resources.stream().filter(cloudResource -> cloudResource.getType() == ResourceType.AWS_LAUNCHCONFIGURATION).forEach(cloudResource ->
-                autoScalingClient.deleteLaunchConfiguration(
-                        new DeleteLaunchConfigurationRequest().withLaunchConfigurationName(cloudResource.getName())));
-    }
-
-    private void deleteKeyPair(AuthenticatedContext ac, CloudStack stack) {
-        AwsCredentialView awsCredential = new AwsCredentialView(ac.getCloudCredential());
-        String region = ac.getCloudContext().getLocation().getRegion().value();
-        if (!awsClient.existingKeyPairNameSpecified(stack.getInstanceAuthentication())) {
-            try {
-                AmazonEC2Client client = awsClient.createAccess(awsCredential, region);
-                DeleteKeyPairRequest deleteKeyPairRequest = new DeleteKeyPairRequest(awsClient.getKeyPairName(ac));
-                client.deleteKeyPair(deleteKeyPairRequest);
-            } catch (Exception e) {
-                String errorMessage = String.format("Failed to delete public key [roleArn:'%s', region: '%s'], detailed message: %s",
-                        awsCredential.getRoleArn(), region, e.getMessage());
-                LOGGER.warn(errorMessage, e);
-            }
-        }
-    }
-
-    private void resumeAutoScalingPolicies(AuthenticatedContext ac, CloudStack stack) {
-        for (Group instanceGroup : stack.getGroups()) {
-            try {
-                String asGroupName = cfStackUtil.getAutoscalingGroupName(ac, instanceGroup.getName(), ac.getCloudContext().getLocation().getRegion().value());
-                if (asGroupName != null) {
-                    AmazonAutoScalingRetryClient amazonASClient = awsClient.createAutoScalingRetryClient(new AwsCredentialView(ac.getCloudCredential()),
-                            ac.getCloudContext().getLocation().getRegion().value());
-                    List<AutoScalingGroup> asGroups = amazonASClient.describeAutoScalingGroups(new DescribeAutoScalingGroupsRequest()
-                            .withAutoScalingGroupNames(asGroupName)).getAutoScalingGroups();
-                    if (!asGroups.isEmpty()) {
-                        if (!asGroups.get(0).getSuspendedProcesses().isEmpty()) {
-                            amazonASClient.updateAutoScalingGroup(new UpdateAutoScalingGroupRequest()
-                                    .withAutoScalingGroupName(asGroupName)
-                                    .withMinSize(0)
-                                    .withDesiredCapacity(0));
-                            amazonASClient.resumeProcesses(new ResumeProcessesRequest().withAutoScalingGroupName(asGroupName));
-                        }
-                    }
-                } else {
-                    LOGGER.info("Autoscaling Group's physical id is null (the resource doesn't exist), it is not needed to resume scaling policies.");
-                }
-            } catch (AmazonServiceException e) {
-                if (e.getErrorMessage().matches("Resource.*does not exist for stack.*") || e.getErrorMessage().matches("Stack '.*' does not exist.*")) {
-                    LOGGER.info(e.getMessage());
-                } else {
-                    throw e;
-                }
-            }
-        }
     }
 
     @Override
@@ -474,7 +351,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             List<CloudResource> resourcesToDownscale = resources.stream()
                     .filter(resource -> instanceIds.contains(resource.getInstanceId()))
                     .collect(Collectors.toList());
-            deleteComputeResources(auth, stack, resourcesToDownscale);
+            computeResourceServiceAdapter.deleteComputeResources(auth, stack, resourcesToDownscale);
 
             String asGroupName = cfStackUtil.getAutoscalingGroupName(auth, vms.get(0).getTemplate().getGroupName(),
                     auth.getCloudContext().getLocation().getRegion().value());

@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,7 +24,6 @@ import org.springframework.stereotype.Service;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
-import com.amazonaws.services.autoscaling.model.SuspendProcessesRequest;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
@@ -52,12 +50,10 @@ import com.sequenceiq.cloudbreak.cloud.aws.view.AwsNetworkView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
-import com.sequenceiq.cloudbreak.cloud.model.CloudInstance;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
-import com.sequenceiq.cloudbreak.cloud.model.InstanceTemplate;
 import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
 import com.sequenceiq.cloudbreak.cloud.task.PollTask;
 import com.sequenceiq.cloudbreak.cloud.template.compute.ComputeResourceService;
@@ -65,17 +61,13 @@ import com.sequenceiq.cloudbreak.cloud.template.context.ResourceBuilderContext;
 import com.sequenceiq.cloudbreak.common.type.ResourceType;
 
 @Service
-public class AwsResourceLaunchService {
+public class AwsLaunchService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AwsResourceLaunchService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AwsLaunchService.class);
 
     private static final String CREATED_VPC = "CreatedVpc";
 
     private static final String CREATED_SUBNET = "CreatedSubnet";
-
-    // DUPLICATED
-    private static final List<String> SUSPENDED_PROCESSES = asList("Launch", "HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification",
-            "ScheduledActions", "AddToLoadBalancer", "RemoveFromLoadBalancerLowPriority");
 
     private static final List<StackStatus> ERROR_STATUSES = asList(CREATE_FAILED, ROLLBACK_IN_PROGRESS, ROLLBACK_FAILED, ROLLBACK_COMPLETE, DELETE_FAILED);
 
@@ -111,6 +103,12 @@ public class AwsResourceLaunchService {
 
     @Inject
     private AwsResourceConnector awsResourceConnector;
+
+    @Inject
+    private AwsContextService awsContextService;
+
+    @Inject
+    private AwsAutoScalingService awsAutoScalingService;
 
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
             AdjustmentType adjustmentType, Long threshold) throws Exception {
@@ -177,7 +175,6 @@ public class AwsResourceLaunchService {
 
         buildComputeResourcesForLaunch(ac, stack, adjustmentType, threshold, instances);
         return awsResourceConnector.check(ac, instances);
-
     }
 
     private List<CloudResourceStatus> buildComputeResourcesForLaunch(AuthenticatedContext ac, CloudStack stack, AdjustmentType adjustmentType, Long threshold,
@@ -185,21 +182,8 @@ public class AwsResourceLaunchService {
         CloudContext cloudContext = ac.getCloudContext();
         ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
 
-        addInstancesToContext(instances, context, stack.getGroups());
+        awsContextService.addInstancesToContext(instances, context, stack.getGroups());
         return computeResourceService.buildResourcesForLaunch(context, ac, stack, adjustmentType, threshold);
-    }
-
-    // TODO remove duplication
-    private void addInstancesToContext(List<CloudResource> instances, ResourceBuilderContext context, List<Group> groups) {
-        groups.forEach(group -> {
-            List<Long> ids = group.getInstances().stream()
-                    .filter(instance -> Objects.isNull(instance.getInstanceId()))
-                    .map(CloudInstance::getTemplate).map(InstanceTemplate::getPrivateId).collect(Collectors.toList());
-            List<CloudResource> groupInstances = instances.stream().filter(inst -> inst.getGroup().equals(group.getName())).collect(Collectors.toList());
-            for (int i = 0; i < ids.size(); i++) {
-                context.addComputeResources(ids.get(i), List.of(groupInstances.get(i)));
-            }
-        });
     }
 
 
@@ -363,17 +347,7 @@ public class AwsResourceLaunchService {
         AmazonCloudFormationRetryClient cloudFormationClient = awsClient.createCloudFormationRetryClient(new AwsCredentialView(ac.getCloudCredential()),
                 ac.getCloudContext().getLocation().getRegion().value());
         scheduleStatusChecks(stack, ac, cloudFormationClient);
-        suspendAutoScaling(ac, stack);
-    }
-
-    // TODO remove duplication
-    private void suspendAutoScaling(AuthenticatedContext ac, CloudStack stack) {
-        AmazonAutoScalingRetryClient amazonASClient = awsClient.createAutoScalingRetryClient(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        for (Group group : stack.getGroups()) {
-            String asGroupName = cfStackUtil.getAutoscalingGroupName(ac, group.getName(), ac.getCloudContext().getLocation().getRegion().value());
-            amazonASClient.suspendProcesses(new SuspendProcessesRequest().withAutoScalingGroupName(asGroupName).withScalingProcesses(SUSPENDED_PROCESSES));
-        }
+        awsAutoScalingService.suspendAutoScaling(ac, stack);
     }
 
     // TODO remove duplication

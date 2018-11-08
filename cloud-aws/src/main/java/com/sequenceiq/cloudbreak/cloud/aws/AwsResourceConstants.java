@@ -15,4 +15,7 @@ public class AwsResourceConstants {
 
     public static final List<StackStatus> ERROR_STATUSES = asList(CREATE_FAILED, ROLLBACK_IN_PROGRESS, ROLLBACK_FAILED, ROLLBACK_COMPLETE, DELETE_FAILED);
 
+    public static final List<String> SUSPENDED_PROCESSES = asList("Launch", "HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification",
+            "ScheduledActions", "AddToLoadBalancer", "RemoveFromLoadBalancerLowPriority");
+
 }

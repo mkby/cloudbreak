@@ -98,7 +98,7 @@ public class AwsTerminateServiceTest {
     private AwsNetworkService awsNetworkService;
 
     @Mock
-    private ComputeResourceServiceAdapter computeResourceServiceAdapter;
+    private AwsComputeResourceService awsComputeResourceService;
 
     @Mock
     private AwsResourceConnector awsResourceConnector;

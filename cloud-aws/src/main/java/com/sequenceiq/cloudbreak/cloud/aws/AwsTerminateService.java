@@ -49,7 +49,7 @@ public class AwsTerminateService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AwsTerminateService.class);
 
     @Inject
-    private ComputeResourceServiceAdapter computeResourceServiceAdapter;
+    private AwsComputeResourceService awsComputeResourceService;
 
     @Inject
     private AwsClient awsClient;
@@ -84,7 +84,7 @@ public class AwsTerminateService {
         AwsCredentialView credentialView = new AwsCredentialView(ac.getCloudCredential());
         String regionName = ac.getCloudContext().getLocation().getRegion().value();
         if (resources != null && !resources.isEmpty()) {
-            computeResourceServiceAdapter.deleteComputeResources(ac, stack, resources);
+            awsComputeResourceService.deleteComputeResources(ac, stack, resources);
 
             AmazonCloudFormationRetryClient cfRetryClient = awsClient.createCloudFormationRetryClient(credentialView, regionName);
             CloudResource stackResource = cfStackUtil.getCloudFormationStackResource(resources);

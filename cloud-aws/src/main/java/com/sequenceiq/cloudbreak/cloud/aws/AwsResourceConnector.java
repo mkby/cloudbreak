@@ -6,14 +6,12 @@ import static java.util.Collections.singletonList;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
@@ -26,8 +24,6 @@ import org.springframework.stereotype.Service;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.autoscaling.model.DetachInstancesRequest;
-import com.amazonaws.services.autoscaling.model.ResumeProcessesRequest;
-import com.amazonaws.services.autoscaling.model.SuspendProcessesRequest;
 import com.amazonaws.services.autoscaling.model.UpdateAutoScalingGroupRequest;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
@@ -51,7 +47,6 @@ import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
 import com.sequenceiq.cloudbreak.cloud.model.InstanceStatus;
-import com.sequenceiq.cloudbreak.cloud.model.InstanceTemplate;
 import com.sequenceiq.cloudbreak.cloud.model.Network;
 import com.sequenceiq.cloudbreak.cloud.model.ResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.TlsInfo;
@@ -73,11 +68,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private static final List<String> CAPABILITY_IAM = singletonList("CAPABILITY_IAM");
 
     private static final List<String> UPSCALE_PROCESSES = asList("Launch");
-
-    private static final List<String> SUSPENDED_PROCESSES = asList("Launch", "HealthCheck", "ReplaceUnhealthy", "AZRebalance", "AlarmNotification",
-            "ScheduledActions", "AddToLoadBalancer", "RemoveFromLoadBalancerLowPriority");
-
-//    private static final List<StackStatus> ERROR_STATUSES = asList(CREATE_FAILED, ROLLBACK_IN_PROGRESS, ROLLBACK_FAILED, ROLLBACK_COMPLETE, DELETE_FAILED);
 
     private static final String CFS_OUTPUT_EIPALLOCATION_ID = "EIPAllocationID";
 
@@ -140,33 +130,30 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private AwsContextBuilder contextBuilder;
 
     @Inject
-    private ComputeResourceServiceAdapter computeResourceServiceAdapter;
+    private AwsComputeResourceService awsComputeResourceService;
 
     @Inject
     private ComputeResourceService computeResourceService;
 
     @Inject
-    private AwsResourceLaunchService awsResourceLaunchService;
+    private AwsLaunchService awsLaunchService;
 
     @Inject
     private AwsTerminateService awsTerminateService;
 
+    @Inject
+    private AwsContextService awsContextService;
+
+    @Inject
+    private AwsAutoScalingService awsAutoScalingService;
+
+    @Inject
+    private AwsUpscaleService awsUpscaleService;
+
     @Override
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
             AdjustmentType adjustmentType, Long threshold) throws Exception {
-        return awsResourceLaunchService.launch(ac, stack, resourceNotifier, adjustmentType, threshold);
-    }
-
-    private void addInstancesToContext(List<CloudResource> instances, ResourceBuilderContext context, List<Group> groups) {
-        groups.forEach(group -> {
-            List<Long> ids = group.getInstances().stream()
-                    .filter(instance -> Objects.isNull(instance.getInstanceId()))
-                    .map(CloudInstance::getTemplate).map(InstanceTemplate::getPrivateId).collect(Collectors.toList());
-            List<CloudResource> groupInstances = instances.stream().filter(inst -> inst.getGroup().equals(group.getName())).collect(Collectors.toList());
-            for (int i = 0; i < ids.size(); i++) {
-                context.addComputeResources(ids.get(i), List.of(groupInstances.get(i)));
-            }
-        });
+        return awsLaunchService.launch(ac, stack, resourceNotifier, adjustmentType, threshold);
     }
 
     private List<CloudResourceStatus> buildComputeResourcesForUpscale(AuthenticatedContext ac, CloudStack stack, List<Group> scaledGroups,
@@ -187,18 +174,9 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             return group.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
         }).collect(Collectors.toList());
 
-        addInstancesToContext(newInstances, context, groupsWithNewInstances);
+        awsContextService.addInstancesToContext(newInstances, context, groupsWithNewInstances);
         return computeResourceService.buildResourcesForUpscale(context, ac, stack, groupsWithNewInstances);
     }
-
-    private List<CloudResourceStatus> deleteComputeResources(AuthenticatedContext ac, CloudStack stack, List<CloudResource> cloudResources) {
-        CloudContext cloudContext = ac.getCloudContext();
-        ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
-
-        return computeResourceService.deleteResources(context, ac, cloudResources, false);
-    }
-
-
 
     private boolean deployingToSameVPC(AwsNetworkView awsNetworkView, boolean existingVPC) {
         return StringUtils.isNoneEmpty(cloudbreakVpc) && existingVPC && awsNetworkView.getExistingVPC().equals(cloudbreakVpc);
@@ -229,21 +207,12 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         return () -> new CloudConnectorException(msg);
     }
 
-    private void suspendAutoScaling(AuthenticatedContext ac, CloudStack stack) {
-        AmazonAutoScalingRetryClient amazonASClient = awsClient.createAutoScalingRetryClient(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        for (Group group : stack.getGroups()) {
-            String asGroupName = cfStackUtil.getAutoscalingGroupName(ac, group.getName(), ac.getCloudContext().getLocation().getRegion().value());
-            amazonASClient.suspendProcesses(new SuspendProcessesRequest().withAutoScalingGroupName(asGroupName).withScalingProcesses(SUSPENDED_PROCESSES));
-        }
-    }
-
-    private void resumeAutoScaling(AmazonAutoScalingRetryClient amazonASClient, Collection<String> groupNames, List<String> autoScalingPolicies) {
-        for (String groupName : groupNames) {
-            amazonASClient.resumeProcesses(new ResumeProcessesRequest().withAutoScalingGroupName(groupName).withScalingProcesses(autoScalingPolicies));
-        }
-    }
-
+//    private void resumeAutoScaling(AmazonAutoScalingRetryClient amazonASClient, Collection<String> groupNames, List<String> autoScalingPolicies) {
+//        for (String groupName : groupNames) {
+//            amazonASClient.resumeProcesses(new ResumeProcessesRequest().withAutoScalingGroupName(groupName).withScalingProcesses(autoScalingPolicies));
+//        }
+//    }
+//
     @Override
     public List<CloudResourceStatus> check(AuthenticatedContext authenticatedContext, List<CloudResource> resources) {
         return new ArrayList<>();
@@ -252,11 +221,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     @Override
     public List<CloudResourceStatus> terminate(AuthenticatedContext ac, CloudStack stack, List<CloudResource> resources) {
         return awsTerminateService.terminate(ac, stack, resources);
-    }
-
-    private void cleanupEncryptedResources(AuthenticatedContext ac, List<CloudResource> resources, String regionName, AmazonEC2Client amazonEC2Client) {
-        encryptedSnapshotService.deleteResources(ac, amazonEC2Client, resources);
-        encryptedImageCopyService.deleteResources(regionName, amazonEC2Client, resources);
     }
 
     @Override
@@ -279,58 +243,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
     @Override
     public List<CloudResourceStatus> upscale(AuthenticatedContext ac, CloudStack stack, List<CloudResource> resources) {
-        AmazonCloudFormationRetryClient cloudFormationClient = awsClient.createCloudFormationRetryClient(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        AmazonAutoScalingRetryClient amazonASClient = awsClient.createAutoScalingRetryClient(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-        AmazonEC2Client amazonEC2Client = awsClient.createAccess(new AwsCredentialView(ac.getCloudCredential()),
-                ac.getCloudContext().getLocation().getRegion().value());
-
-        List<Group> scaledGroups = cloudResourceHelper.getScaledGroups(stack);
-        Map<String, Group> groupMap = scaledGroups.stream().collect(
-                Collectors.toMap(g -> cfStackUtil.getAutoscalingGroupName(ac, cloudFormationClient, g.getName()), g -> g));
-        resumeAutoScaling(amazonASClient, groupMap.keySet(), UPSCALE_PROCESSES);
-        for (Map.Entry<String, Group> groupEntry : groupMap.entrySet()) {
-            Group group = groupEntry.getValue();
-            amazonASClient.updateAutoScalingGroup(new UpdateAutoScalingGroupRequest()
-                    .withAutoScalingGroupName(groupEntry.getKey())
-                    .withMaxSize(group.getInstancesSize())
-                    .withDesiredCapacity(group.getInstancesSize()));
-            LOGGER.info("Updated Auto Scaling group's desiredCapacity: [stack: '{}', to: '{}']", ac.getCloudContext().getId(),
-                    group.getInstancesSize());
-        }
-        scheduleStatusChecks(stack, ac, cloudFormationClient);
-        suspendAutoScaling(ac, stack);
-
-        List<CloudResource> instances =
-                cfStackUtil.getInstanceCloudResources(ac, cloudFormationClient, amazonASClient, scaledGroups);
-
-        boolean mapPublicIpOnLaunch = awsNetworkService.isMapPublicOnLaunch(new AwsNetworkView(stack.getNetwork()), amazonEC2Client);
-        List<Group> gateways = awsNetworkService.getGatewayGroups(scaledGroups);
-        Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
-                .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
-                .filter(instance -> {
-                    Group gateway = gateways.stream().filter(gw -> gw.getName().equals(instance.getGroup())).findFirst().get();
-                    return gateway.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
-                })
-                .collect(Collectors.toMap(
-                        CloudResource::getGroup,
-                        instance -> List.of(instance.getInstanceId()),
-                        (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
-        if (mapPublicIpOnLaunch && !gateways.isEmpty()) {
-            String cFStackName = cfStackUtil.getCloudFormationStackResource(resources).getName();
-            Map<String, String> eipAllocationIds = awsNetworkService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cloudFormationClient), cFStackName);
-            for (Group gateway : gateways) {
-                List<String> eips = awsNetworkService.getEipsForGatewayGroup(eipAllocationIds, gateway);
-                List<String> freeEips = awsNetworkService.getFreeIps(eips, amazonEC2Client);
-                List<String> newInstances = gatewayGroupInstanceMapping.get(gateway.getName());
-                awsNetworkService.associateElasticIpsToInstances(amazonEC2Client, freeEips, newInstances);
-            }
-        }
-
-        buildComputeResourcesForUpscale(ac, stack, scaledGroups, instances);
-
-        return singletonList(new CloudResourceStatus(cfStackUtil.getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
+        return awsUpscaleService.upscale(ac, stack, resources);
     }
 
     @Override
@@ -351,7 +264,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
             List<CloudResource> resourcesToDownscale = resources.stream()
                     .filter(resource -> instanceIds.contains(resource.getInstanceId()))
                     .collect(Collectors.toList());
-            computeResourceServiceAdapter.deleteComputeResources(auth, stack, resourcesToDownscale);
+            awsComputeResourceService.deleteComputeResources(auth, stack, resourcesToDownscale);
 
             String asGroupName = cfStackUtil.getAutoscalingGroupName(auth, vms.get(0).getTemplate().getGroupName(),
                     auth.getCloudContext().getLocation().getRegion().value());

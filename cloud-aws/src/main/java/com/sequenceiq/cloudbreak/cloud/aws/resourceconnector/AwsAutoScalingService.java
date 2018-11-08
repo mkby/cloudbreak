@@ -1,6 +1,6 @@
-package com.sequenceiq.cloudbreak.cloud.aws;
+package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
 
-import static com.sequenceiq.cloudbreak.cloud.aws.AwsResourceConstants.SUSPENDED_PROCESSES;
+import static com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConstants.SUSPENDED_PROCESSES;
 
 import java.util.Collection;
 import java.util.List;
@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import com.amazonaws.services.autoscaling.model.ResumeProcessesRequest;
 import com.amazonaws.services.autoscaling.model.SuspendProcessesRequest;
+import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
+import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;

@@ -23,6 +23,10 @@ import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClien
 import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedSnapshotService;
+import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsComputeResourceService;
+import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsNetworkService;
+import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsTerminateService;
 import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
 import com.sequenceiq.cloudbreak.cloud.aws.task.AwsPollTaskFactory;
 import com.sequenceiq.cloudbreak.cloud.aws.task.AwsTerminateStackStatusCheckerTask;

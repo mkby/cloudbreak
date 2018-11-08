@@ -1,4 +1,4 @@
-package com.sequenceiq.cloudbreak.cloud.aws;
+package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
 
 import static com.amazonaws.services.cloudformation.model.Capability.CAPABILITY_IAM;
 import static com.amazonaws.services.cloudformation.model.StackStatus.CREATE_COMPLETE;
@@ -38,6 +38,11 @@ import com.amazonaws.services.ec2.model.Image;
 import com.amazonaws.services.ec2.model.ImportKeyPairRequest;
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
+import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
+import com.sequenceiq.cloudbreak.cloud.aws.AwsContextService;
+import com.sequenceiq.cloudbreak.cloud.aws.AwsTagPreparationService;
+import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
+import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationTemplateBuilder;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;

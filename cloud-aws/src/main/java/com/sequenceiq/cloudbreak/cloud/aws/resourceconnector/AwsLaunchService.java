@@ -39,7 +39,6 @@ import com.amazonaws.services.ec2.model.ImportKeyPairRequest;
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
-import com.sequenceiq.cloudbreak.cloud.aws.AwsContextService;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsTagPreparationService;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationTemplateBuilder;
@@ -105,9 +104,6 @@ public class AwsLaunchService {
 
     @Inject
     private AwsResourceConnector awsResourceConnector;
-
-    @Inject
-    private AwsContextService awsContextService;
 
     @Inject
     private AwsAutoScalingService awsAutoScalingService;

@@ -166,13 +166,11 @@ public class AwsLaunchService {
             throw new CloudConnectorException(e.getMessage(), e);
         }
 
-        AmazonAutoScalingRetryClient amazonASClient = awsClient.createAutoScalingRetryClient(credentialView, regionName);
         saveGeneratedSubnet(ac, stack, cFStackName, cfRetryClient, resourceNotifier);
-
         suspendAutoscalingGoupsWhenNewInstancesAreReady(ac, stack);
 
-        List<CloudResource> instances =
-                cfStackUtil.getInstanceCloudResources(ac, cfRetryClient, amazonASClient, stack.getGroups());
+        AmazonAutoScalingRetryClient amazonASClient = awsClient.createAutoScalingRetryClient(credentialView, regionName);
+        List<CloudResource> instances = cfStackUtil.getInstanceCloudResources(ac, cfRetryClient, amazonASClient, stack.getGroups());
 
         if (mapPublicIpOnLaunch) {
             associatePublicIpsToGatewayInstances(stack, cFStackName, cfRetryClient, amazonEC2Client, instances);

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.amazonaws.services.autoscaling.model.ResumeProcessesRequest;
 import com.amazonaws.services.autoscaling.model.SuspendProcessesRequest;
+import com.amazonaws.services.autoscaling.model.UpdateAutoScalingGroupRequest;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
@@ -70,5 +71,15 @@ public class AwsAutoScalingService {
                 throw new CloudConnectorException(e.getMessage(), e);
             }
         }
+    }
+
+    public void updateAutoscalingGroup(AmazonAutoScalingRetryClient amazonASClient, String groupName, Group group, Long cloudContextId){
+        amazonASClient.updateAutoScalingGroup(new UpdateAutoScalingGroupRequest()
+                .withAutoScalingGroupName(groupName)
+                .withMaxSize(group.getInstancesSize())
+                .withDesiredCapacity(group.getInstancesSize()));
+        LOGGER.info("Updated Auto Scaling group's desiredCapacity: [stack: '{}', to: '{}']", cloudContextId,
+                group.getInstancesSize());
+
     }
 }

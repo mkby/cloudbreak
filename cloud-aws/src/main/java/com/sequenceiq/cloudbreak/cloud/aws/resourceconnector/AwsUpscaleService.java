@@ -5,6 +5,7 @@ import static java.util.Collections.singletonList;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -14,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.amazonaws.services.autoscaling.model.UpdateAutoScalingGroupRequest;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
@@ -24,6 +24,7 @@ import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsCredentialView;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsNetworkView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
+import com.sequenceiq.cloudbreak.cloud.model.CloudInstance;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
@@ -74,13 +75,7 @@ public class AwsUpscaleService {
                 Collectors.toMap(g -> cfStackUtil.getAutoscalingGroupName(ac, cloudFormationClient, g.getName()), g -> g));
         awsAutoScalingService.resumeAutoScaling(amazonASClient, groupMap.keySet(), UPSCALE_PROCESSES);
         for (Map.Entry<String, Group> groupEntry : groupMap.entrySet()) {
-            Group group = groupEntry.getValue();
-            amazonASClient.updateAutoScalingGroup(new UpdateAutoScalingGroupRequest()
-                    .withAutoScalingGroupName(groupEntry.getKey())
-                    .withMaxSize(group.getInstancesSize())
-                    .withDesiredCapacity(group.getInstancesSize()));
-            LOGGER.info("Updated Auto Scaling group's desiredCapacity: [stack: '{}', to: '{}']", ac.getCloudContext().getId(),
-                    group.getInstancesSize());
+            awsAutoScalingService.updateAutoscalingGroup(amazonASClient, groupEntry.getKey(), groupEntry.getValue(), ac.getCloudContext().getId());
         }
         awsAutoScalingService.scheduleStatusChecks(stack, ac, cloudFormationClient);
         awsAutoScalingService.suspendAutoScaling(ac, stack);
@@ -111,8 +106,28 @@ public class AwsUpscaleService {
             }
         }
 
-        awsComputeResourceService.buildComputeResourcesForUpscale(ac, stack, scaledGroups, instances);
+        List<Group> groupsWithNewInstances = getGroupsWithNewInstances(scaledGroups);
+        List<CloudResource> newInstances = getNewInstances(scaledGroups, instances);
+        awsComputeResourceService.buildComputeResourcesForUpscale(ac, stack, groupsWithNewInstances, newInstances);
 
         return singletonList(new CloudResourceStatus(cfStackUtil.getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
     }
+
+    private List<CloudResource> getNewInstances(List<Group> scaledGroups, List<CloudResource> instances) {
+        return instances.stream().filter(instance -> {
+            Group group = scaledGroups.stream().filter(scaledGroup -> scaledGroup.getName().equals(instance.getGroup())).findFirst().get();
+            return group.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
+        }).collect(Collectors.toList());
+    }
+
+    private List<Group> getGroupsWithNewInstances(List<Group> scaledGroups) {
+        return scaledGroups.stream().map(group -> {
+            List<CloudInstance> newInstances = group.getInstances().stream()
+                    .filter(instance -> Objects.isNull(instance.getInstanceId())).collect(Collectors.toList());
+
+            return new Group(group.getName(), group.getType(), newInstances, group.getSecurity(), null, group.getParameters(),
+                    group.getInstanceAuthentication(), group.getLoginUserName(), group.getPublicKey(), group.getRootVolumeSize());
+        }).collect(Collectors.toList());
+    }
+
 }

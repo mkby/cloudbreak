@@ -115,6 +115,9 @@ public class AwsLaunchService {
     @Inject
     private AwsAutoScalingService awsAutoScalingService;
 
+    @Inject
+    private AwsElasticIpService awsElasticIpService;
+
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
             AdjustmentType adjustmentType, Long threshold) throws Exception {
         createKeyPair(ac, stack);
@@ -195,7 +198,7 @@ public class AwsLaunchService {
     private void associatePublicIpsToGatewayInstances(CloudStack stack, String cFStackName, AmazonCloudFormationRetryClient cfRetryClient,
             AmazonEC2Client amazonEC2Client, List<CloudResource> instances) {
         Map<String, String> eipAllocationIds =
-                awsNetworkService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
+                awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
         List<Group> gateways = getGatewayGroups(stack.getGroups());
         Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
                 .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
@@ -204,9 +207,9 @@ public class AwsLaunchService {
                         instance -> List.of(instance.getInstanceId()),
                         (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
         for (Group gateway : gateways) {
-            List<String> eips = awsNetworkService.getEipsForGatewayGroup(eipAllocationIds, gateway);
+            List<String> eips = awsElasticIpService.getEipsForGatewayGroup(eipAllocationIds, gateway);
             List<String> instanceIds = gatewayGroupInstanceMapping.get(gateway.getName());
-            awsNetworkService.associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
+            awsElasticIpService.associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
         }
     }
 

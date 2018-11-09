@@ -58,6 +58,9 @@ public class AwsUpscaleService {
     @Inject
     private AwsComputeResourceService awsComputeResourceService;
 
+    @Inject
+    private AwsElasticIpService awsElasticIpService;
+
     public List<CloudResourceStatus> upscale(AuthenticatedContext ac, CloudStack stack, List<CloudResource> resources) {
         AmazonCloudFormationRetryClient cloudFormationClient = awsClient.createCloudFormationRetryClient(new AwsCredentialView(ac.getCloudCredential()),
                 ac.getCloudContext().getLocation().getRegion().value());
@@ -99,12 +102,12 @@ public class AwsUpscaleService {
                         (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
         if (mapPublicIpOnLaunch && !gateways.isEmpty()) {
             String cFStackName = cfStackUtil.getCloudFormationStackResource(resources).getName();
-            Map<String, String> eipAllocationIds = awsNetworkService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cloudFormationClient), cFStackName);
+            Map<String, String> eipAllocationIds = awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cloudFormationClient), cFStackName);
             for (Group gateway : gateways) {
-                List<String> eips = awsNetworkService.getEipsForGatewayGroup(eipAllocationIds, gateway);
-                List<String> freeEips = awsNetworkService.getFreeIps(eips, amazonEC2Client);
+                List<String> eips = awsElasticIpService.getEipsForGatewayGroup(eipAllocationIds, gateway);
+                List<String> freeEips = awsElasticIpService.getFreeIps(eips, amazonEC2Client);
                 List<String> newInstances = gatewayGroupInstanceMapping.get(gateway.getName());
-                awsNetworkService.associateElasticIpsToInstances(amazonEC2Client, freeEips, newInstances);
+                awsElasticIpService.associateElasticIpsToInstances(amazonEC2Client, freeEips, newInstances);
             }
         }
 

@@ -79,7 +79,7 @@ public class AwsTerminateService {
     private Retry retryService;
 
     @Inject
-    private AwsNetworkService awsNetworkService;
+    private AwsElasticIpService awsElasticIpService;
 
     public List<CloudResourceStatus> terminate(AuthenticatedContext ac, CloudStack stack, List<CloudResource> resources) {
         LOGGER.info("Deleting stack: {}", ac.getCloudContext().getId());
@@ -112,7 +112,7 @@ public class AwsTerminateService {
                 });
             } catch (Retry.ActionWentFailException ignored) {
                 LOGGER.info("Stack not found with name: {}", cFStackName);
-                awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
+                awsElasticIpService.releaseReservedIp(amazonEC2Client, resources);
                 cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
                 return Collections.emptyList();
             }
@@ -128,13 +128,13 @@ public class AwsTerminateService {
             } catch (Exception e) {
                 throw new CloudConnectorException(e.getMessage(), e);
             }
-            awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
+            awsElasticIpService.releaseReservedIp(amazonEC2Client, resources);
             cleanupEncryptedResources(ac, resources, regionName, amazonEC2Client);
             deleteKeyPair(ac, stack);
             deleteLaunchConfiguration(resources, ac);
         } else if (resources != null) {
             AmazonEC2Client amazonEC2Client = awsClient.createAccess(credentialView, regionName);
-            awsNetworkService.releaseReservedIp(amazonEC2Client, resources);
+            awsElasticIpService.releaseReservedIp(amazonEC2Client, resources);
             LOGGER.info("No CloudFormation stack saved for stack.");
         } else {
             LOGGER.info("No resources to release.");

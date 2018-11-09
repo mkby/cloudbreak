@@ -24,7 +24,7 @@ import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedSnapshotService;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsComputeResourceService;
-import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsNetworkService;
+import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsElasticIpService;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsTerminateService;
 import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
@@ -99,7 +99,7 @@ public class AwsTerminateServiceTest {
     private CloudFormationStackUtil cfStackUtil;
 
     @Mock
-    private AwsNetworkService awsNetworkService;
+    private AwsElasticIpService awsElasticIpService;
 
     @Mock
     private AwsComputeResourceService awsComputeResourceService;

@@ -71,6 +71,7 @@ public class AwsUpscaleService {
                 ac.getCloudContext().getLocation().getRegion().value());
 
         List<Group> scaledGroups = cloudResourceHelper.getScaledGroups(stack);
+
         Map<String, Group> groupMap = scaledGroups.stream().collect(
                 Collectors.toMap(g -> cfStackUtil.getAutoscalingGroupName(ac, cloudFormationClient, g.getName()), g -> g));
         awsAutoScalingService.resumeAutoScaling(amazonASClient, groupMap.keySet(), UPSCALE_PROCESSES);
@@ -80,21 +81,20 @@ public class AwsUpscaleService {
         awsAutoScalingService.scheduleStatusChecks(stack, ac, cloudFormationClient);
         awsAutoScalingService.suspendAutoScaling(ac, stack);
 
-        List<CloudResource> instances =
-                cfStackUtil.getInstanceCloudResources(ac, cloudFormationClient, amazonASClient, scaledGroups);
+        List<CloudResource> instances = cfStackUtil.getInstanceCloudResources(ac, cloudFormationClient, amazonASClient, scaledGroups);
+        associateElasticIpWithNewInstances(stack, resources, cloudFormationClient, amazonEC2Client, scaledGroups, instances);
 
+        List<Group> groupsWithNewInstances = getGroupsWithNewInstances(scaledGroups);
+        List<CloudResource> newInstances = getNewInstances(scaledGroups, instances);
+        awsComputeResourceService.buildComputeResourcesForUpscale(ac, stack, groupsWithNewInstances, newInstances);
+
+        return singletonList(new CloudResourceStatus(cfStackUtil.getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
+    }
+
+    private void associateElasticIpWithNewInstances(CloudStack stack, List<CloudResource> resources, AmazonCloudFormationRetryClient cloudFormationClient, AmazonEC2Client amazonEC2Client, List<Group> scaledGroups, List<CloudResource> instances) {
         boolean mapPublicIpOnLaunch = awsNetworkService.isMapPublicOnLaunch(new AwsNetworkView(stack.getNetwork()), amazonEC2Client);
         List<Group> gateways = awsNetworkService.getGatewayGroups(scaledGroups);
-        Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
-                .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
-                .filter(instance -> {
-                    Group gateway = gateways.stream().filter(gw -> gw.getName().equals(instance.getGroup())).findFirst().get();
-                    return gateway.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
-                })
-                .collect(Collectors.toMap(
-                        CloudResource::getGroup,
-                        instance -> List.of(instance.getInstanceId()),
-                        (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
+        Map<String, List<String>> gatewayGroupInstanceMapping = createGatewayToNewInstancesMap(instances, gateways);
         if (mapPublicIpOnLaunch && !gateways.isEmpty()) {
             String cFStackName = cfStackUtil.getCloudFormationStackResource(resources).getName();
             Map<String, String> eipAllocationIds = awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cloudFormationClient), cFStackName);
@@ -105,12 +105,19 @@ public class AwsUpscaleService {
                 awsElasticIpService.associateElasticIpsToInstances(amazonEC2Client, freeEips, newInstances);
             }
         }
+    }
 
-        List<Group> groupsWithNewInstances = getGroupsWithNewInstances(scaledGroups);
-        List<CloudResource> newInstances = getNewInstances(scaledGroups, instances);
-        awsComputeResourceService.buildComputeResourcesForUpscale(ac, stack, groupsWithNewInstances, newInstances);
-
-        return singletonList(new CloudResourceStatus(cfStackUtil.getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
+    private Map<String, List<String>> createGatewayToNewInstancesMap(List<CloudResource> instances, List<Group> gateways) {
+        return instances.stream()
+                .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
+                .filter(instance -> {
+                    Group gateway = gateways.stream().filter(gw -> gw.getName().equals(instance.getGroup())).findFirst().get();
+                    return gateway.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
+                })
+                .collect(Collectors.toMap(
+                        CloudResource::getGroup,
+                        instance -> List.of(instance.getInstanceId()),
+                        (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
     }
 
     private List<CloudResource> getNewInstances(List<Group> scaledGroups, List<CloudResource> instances) {

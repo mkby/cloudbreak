@@ -155,6 +155,7 @@ cb:
   arm:
     template.path: templates/arm-v2.ftl
     parameter.path: templates/parameters.ftl
+    app.creation.template.path: templates/app-creation-command.ftl
 
   openstack:
     heat.template.path: templates/openstack-heat.ftl

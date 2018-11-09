@@ -6,7 +6,6 @@ import static java.util.Collections.singletonList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Service;
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.cloud.ResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsContextService;
-import com.sequenceiq.cloudbreak.cloud.aws.AwsImageUpdateService;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsNetworkView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
 import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
@@ -29,11 +27,8 @@ import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Network;
-import com.sequenceiq.cloudbreak.cloud.model.ResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.model.TlsInfo;
 import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
-import com.sequenceiq.cloudbreak.common.type.CommonResourceType;
-import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.service.Retry;
 
 import freemarker.template.Configuration;
@@ -68,9 +63,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
     private Retry retryService;
 
     @Inject
-    private AwsImageUpdateService awsImageUpdateService;
-
-    @Inject
     private AwsLaunchService awsLaunchService;
 
     @Inject
@@ -87,6 +79,9 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
     @Inject
     private AwsDownscaleService awsDownscaleService;
+
+    @Inject
+    private AwsUpdateService awsUpdateService;
 
     @Override
     public List<CloudResourceStatus> launch(AuthenticatedContext ac, CloudStack stack, PersistenceNotifier resourceNotifier,
@@ -111,20 +106,7 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
 
     @Override
     public List<CloudResourceStatus> update(AuthenticatedContext authenticatedContext, CloudStack stack, List<CloudResource> resources) {
-        ArrayList<CloudResourceStatus> cloudResourceStatuses = new ArrayList<>();
-        if (!resources.isEmpty() && resources.stream().anyMatch(resource -> CommonResourceType.TEMPLATE == resource.getType().getCommonResourceType()
-                && StringUtils.isNotBlank(resource.getStringParameter(CloudResource.IMAGE)))) {
-
-            List<CloudResource> launchConfigurationResources = resources.stream()
-                    .filter(resource -> CommonResourceType.TEMPLATE == resource.getType().getCommonResourceType()
-                            && StringUtils.isNotBlank(resource.getStringParameter(CloudResource.IMAGE))).collect(Collectors.toList());
-
-            CloudResource cfResource = resources.stream().filter(resource -> ResourceType.CLOUDFORMATION_STACK == resource.getType()).findFirst().orElseThrow();
-            awsImageUpdateService.updateImage(authenticatedContext, stack, cfResource);
-
-            launchConfigurationResources.forEach(cloudResource -> cloudResourceStatuses.add(new CloudResourceStatus(cloudResource, ResourceStatus.UPDATED)));
-        }
-        return cloudResourceStatuses;
+        return awsUpdateService.update(authenticatedContext, stack, resources);
     }
 
     @Override

@@ -124,13 +124,13 @@ public class AwsLaunchService {
         AmazonCloudFormationRetryClient cfRetryClient = awsClient.createCloudFormationRetryClient(credentialView, regionName);
         AmazonEC2Client amazonEC2Client = awsClient.createAccess(credentialView, regionName);
         AwsNetworkView awsNetworkView = new AwsNetworkView(stack.getNetwork());
-        boolean existingVPC = awsNetworkView.isExistingVPC();
-        boolean existingSubnet = awsNetworkView.isExistingSubnet();
         boolean mapPublicIpOnLaunch = awsNetworkService.isMapPublicOnLaunch(awsNetworkView, amazonEC2Client);
         try {
             cfRetryClient.describeStacks(new DescribeStacksRequest().withStackName(cFStackName));
             LOGGER.info("Stack already exists: {}", cFStackName);
         } catch (AmazonServiceException ignored) {
+            boolean existingVPC = awsNetworkView.isExistingVPC();
+            boolean existingSubnet = awsNetworkView.isExistingSubnet();
             CloudResource cloudFormationStack = new CloudResource.Builder().type(ResourceType.CLOUDFORMATION_STACK).name(cFStackName).build();
             resourceNotifier.notifyAllocation(cloudFormationStack, ac.getCloudContext());
 
@@ -182,20 +182,27 @@ public class AwsLaunchService {
 
     private void associatePublicIpsToGatewayInstances(CloudStack stack, String cFStackName, AmazonCloudFormationRetryClient cfRetryClient,
             AmazonEC2Client amazonEC2Client, List<CloudResource> instances) {
-        Map<String, String> eipAllocationIds =
-                awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
         List<Group> gateways = awsNetworkService.getGatewayGroups(stack.getGroups());
-        Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
-                .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
-                .collect(Collectors.toMap(
-                        CloudResource::getGroup,
-                        instance -> List.of(instance.getInstanceId()),
-                        (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
+        Map<String, List<String>> gatewayGroupInstanceMapping = createGatewayToInstanceMap(instances, gateways);
+        setElasticIps(cFStackName, cfRetryClient, amazonEC2Client, gateways, gatewayGroupInstanceMapping);
+    }
+
+    private void setElasticIps(String cFStackName, AmazonCloudFormationRetryClient cfRetryClient, AmazonEC2Client amazonEC2Client, List<Group> gateways, Map<String, List<String>> gatewayGroupInstanceMapping) {
+        Map<String, String> eipAllocationIds = awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
         for (Group gateway : gateways) {
             List<String> eips = awsElasticIpService.getEipsForGatewayGroup(eipAllocationIds, gateway);
             List<String> instanceIds = gatewayGroupInstanceMapping.get(gateway.getName());
             awsElasticIpService.associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
         }
+    }
+
+    private Map<String, List<String>> createGatewayToInstanceMap(List<CloudResource> instances, List<Group> gateways) {
+        return instances.stream()
+                .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
+                .collect(Collectors.toMap(
+                        CloudResource::getGroup,
+                        instance -> List.of(instance.getInstanceId()),
+                        (listOne, listTwo) -> Stream.concat(listOne.stream(), listTwo.stream()).collect(Collectors.toList())));
     }
 
     private void createKeyPair(AuthenticatedContext ac, CloudStack stack) {

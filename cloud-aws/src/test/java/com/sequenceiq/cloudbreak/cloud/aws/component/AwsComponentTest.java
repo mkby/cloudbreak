@@ -1,6 +1,10 @@
 package com.sequenceiq.cloudbreak.cloud.aws.component;
 
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import javax.inject.Inject;
 
@@ -17,10 +21,12 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsPlatformParameters;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsPlatformResources;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsTagValidator;
+import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.component.AwsComponentTest.AwsTestContext;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.notification.ResourceNotifier;
@@ -67,9 +73,6 @@ public class AwsComponentTest {
 
         private static final int INTERMEDIATE_QUEUE_CAPACITY = 20;
 
-        @MockBean
-        private AwsClient awsClient;
-
         @MockBean(name="DefaultRetryService")
         private Retry defaultRetryService;
 
@@ -96,6 +99,18 @@ public class AwsComponentTest {
 
         @MockBean
         private AwsTagValidator awsTagValidator;
+
+        @MockBean
+        private AmazonCloudFormationRetryClient amazonCloudFormationRetryClient;
+
+        @Bean
+        public AwsClient awsClient(){
+            AwsClient awsClient= mock(AwsClient.class);
+            when(awsClient.createAccess(any(), anyString())).thenReturn(mock(AmazonEC2Client.class));
+            when(awsClient.createAccess(any())).thenReturn(mock(AmazonEC2Client.class));
+            when(awsClient.createCloudFormationRetryClient(any(), anyString())).thenReturn(amazonCloudFormationRetryClient);
+            return awsClient;
+        }
 
         @Bean
         public AsyncTaskExecutor resourceBuilderExecutor() {

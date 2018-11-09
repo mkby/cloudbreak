@@ -8,6 +8,7 @@ import javax.inject.Inject;
 
 import org.springframework.stereotype.Service;
 
+import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsContextService;
 import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
@@ -32,11 +33,13 @@ public class AwsComputeResourceService {
     @Inject
     private AwsContextService awsContextService;
 
-    public List<CloudResourceStatus> deleteComputeResources(AuthenticatedContext ac, CloudStack stack, List<CloudResource> cloudResources) {
+    public List<CloudResourceStatus> buildComputeResourcesForLaunch(AuthenticatedContext ac, CloudStack stack, AdjustmentType adjustmentType, Long threshold,
+            List<CloudResource> instances) {
         CloudContext cloudContext = ac.getCloudContext();
         ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
 
-        return computeResourceService.deleteResources(context, ac, cloudResources, false);
+        awsContextService.addInstancesToContext(instances, context, stack.getGroups());
+        return computeResourceService.buildResourcesForLaunch(context, ac, stack, adjustmentType, threshold);
     }
 
     public List<CloudResourceStatus> buildComputeResourcesForUpscale(AuthenticatedContext ac, CloudStack stack, List<Group> scaledGroups,
@@ -61,4 +64,10 @@ public class AwsComputeResourceService {
         return computeResourceService.buildResourcesForUpscale(context, ac, stack, groupsWithNewInstances);
     }
 
+    public List<CloudResourceStatus> deleteComputeResources(AuthenticatedContext ac, CloudStack stack, List<CloudResource> cloudResources) {
+        CloudContext cloudContext = ac.getCloudContext();
+        ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
+
+        return computeResourceService.deleteResources(context, ac, cloudResources, false);
+    }
 }

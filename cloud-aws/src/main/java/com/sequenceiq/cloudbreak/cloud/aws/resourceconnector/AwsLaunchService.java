@@ -53,7 +53,6 @@ import com.sequenceiq.cloudbreak.cloud.aws.view.AwsCredentialView;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsInstanceProfileView;
 import com.sequenceiq.cloudbreak.cloud.aws.view.AwsNetworkView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
-import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResource;
 import com.sequenceiq.cloudbreak.cloud.model.CloudResourceStatus;
@@ -61,8 +60,6 @@ import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
 import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
 import com.sequenceiq.cloudbreak.cloud.task.PollTask;
-import com.sequenceiq.cloudbreak.cloud.template.compute.ComputeResourceService;
-import com.sequenceiq.cloudbreak.cloud.template.context.ResourceBuilderContext;
 import com.sequenceiq.cloudbreak.common.type.ResourceType;
 
 @Service
@@ -104,7 +101,7 @@ public class AwsLaunchService {
     private AwsContextBuilder contextBuilder;
 
     @Inject
-    private ComputeResourceService computeResourceService;
+    private AwsComputeResourceService awsComputeResourceService;
 
     @Inject
     private AwsResourceConnector awsResourceConnector;
@@ -181,25 +178,15 @@ public class AwsLaunchService {
             associatePublicIpsToGatewayInstances(stack, cFStackName, cfRetryClient, amazonEC2Client, instances);
         }
 
-        buildComputeResourcesForLaunch(ac, stack, adjustmentType, threshold, instances);
+        awsComputeResourceService.buildComputeResourcesForLaunch(ac, stack, adjustmentType, threshold, instances);
         return awsResourceConnector.check(ac, instances);
     }
-
-    private List<CloudResourceStatus> buildComputeResourcesForLaunch(AuthenticatedContext ac, CloudStack stack, AdjustmentType adjustmentType, Long threshold,
-            List<CloudResource> instances) {
-        CloudContext cloudContext = ac.getCloudContext();
-        ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
-
-        awsContextService.addInstancesToContext(instances, context, stack.getGroups());
-        return computeResourceService.buildResourcesForLaunch(context, ac, stack, adjustmentType, threshold);
-    }
-
 
     private void associatePublicIpsToGatewayInstances(CloudStack stack, String cFStackName, AmazonCloudFormationRetryClient cfRetryClient,
             AmazonEC2Client amazonEC2Client, List<CloudResource> instances) {
         Map<String, String> eipAllocationIds =
                 awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
-        List<Group> gateways = getGatewayGroups(stack.getGroups());
+        List<Group> gateways = awsNetworkService.getGatewayGroups(stack.getGroups());
         Map<String, List<String>> gatewayGroupInstanceMapping = instances.stream()
                 .filter(instance -> gateways.stream().anyMatch(gw -> gw.getName().equals(instance.getGroup())))
                 .collect(Collectors.toMap(
@@ -211,10 +198,6 @@ public class AwsLaunchService {
             List<String> instanceIds = gatewayGroupInstanceMapping.get(gateway.getName());
             awsElasticIpService.associateElasticIpsToInstances(amazonEC2Client, eips, instanceIds);
         }
-    }
-
-    private List<Group> getGatewayGroups(Collection<Group> groups) {
-        return groups.stream().filter(group -> group.getType() == InstanceGroupType.GATEWAY).collect(Collectors.toList());
     }
 
     private void createKeyPair(AuthenticatedContext ac, CloudStack stack) {

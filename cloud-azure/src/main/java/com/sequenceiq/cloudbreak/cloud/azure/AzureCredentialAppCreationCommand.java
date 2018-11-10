@@ -25,7 +25,7 @@ public class AzureCredentialAppCreationCommand {
 
     private static final long YEARS_OF_EXPIRATION = 3L;
 
-    private static final String CB_AZ_APP_AUTH_URI = "/api/v3/utils/auth";
+    private static final String CB_AZ_APP_AUTH_URI_PATTERN = "api/v3/%s/credentials/codegrantflow/authorization/azure";
 
     private static final String DELIMITER = "/";
 
@@ -49,11 +49,20 @@ public class AzureCredentialAppCreationCommand {
         }
     }
 
+    public String getReplyUrl() {
+        return getReplyUrl("*");
+    }
+
+    public String getReplyUrl(String workspaceId) {
+        String cbAzAppAuthUri = String.format(CB_AZ_APP_AUTH_URI_PATTERN, workspaceId);
+        return deploymentAddress.concat(cbAzAppAuthUri);
+    }
+
     private Map<String, Object> buildModel() {
         Map<String, Object> model = new HashBiMap<>();
         model.put("cloudbreakAddress", deploymentAddress);
         model.put("identifierURI", deploymentAddress.concat(DELIMITER).concat(UUID.randomUUID().toString()));
-        model.put("cloudbreakReplyUrl", deploymentAddress.concat(CB_AZ_APP_AUTH_URI));
+        model.put("cloudbreakReplyUrl", getReplyUrl());
         model.put("expirationDate", getExpirationDate());
         return model;
     }

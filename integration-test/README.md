@@ -14,12 +14,12 @@ This Springboot project wraps a TestNg framework, which actually runs the testca
     `cb.enabledplatforms: AZURE,AWS,GCP,OPENSTACK,MOCK`
 2. Restart cloudbreak
 
-## Configuration parameters:
-Most of the configutation parameters with their default values (if any) can be found in the src/main/resources/application.yml file.
-You can define your own application.yml file where you can overwrite the default parameters in the working directory where the integration test is running from, or 
+## Configuration codeGrantFlowInitParams:
+Most of the configutation codeGrantFlowInitParams with their default values (if any) can be found in the src/main/resources/application.yml file.
+You can define your own application.yml file where you can overwrite the default codeGrantFlowInitParams in the working directory where the integration test is running from, or 
 you can define the SPRING_CONFIG_LOCATION environment variable or *spring.config.additional-location* program argument with the location of your application.yml.
 
-### Quickstart setup of Integration tests with required parameters
+### Quickstart setup of Integration tests with required codeGrantFlowInitParams
 
 * url of uaa server
 * uaa user
@@ -52,7 +52,7 @@ integrationtest:
         cleanupBeforeStart: true        
 ```
 
-These parameters can also be specified as program arguments or environment variables.
+These codeGrantFlowInitParams can also be specified as program arguments or environment variables.
 https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html
 
 ```
@@ -78,7 +78,7 @@ java -jar <path of cloudbreak.jar> --integrationtest.command=smoketest --integra
 ```
 ##### fulltest
 In this case couple of tests in differents regions will be run on all cloudprovider. The full tests are outdated, the usage of fulltest is not recommended.
-In this case you have to define `'--integrationtest.fulltest.regindex'` and `'--integrationtest.fulltest.regnum'` parameters.
+In this case you have to define `'--integrationtest.fulltest.regindex'` and `'--integrationtest.fulltest.regnum'` codeGrantFlowInitParams.
 ##### suites
 In this case you have to define the suite files in the `'--integrationtest.suiteFiles'` program arguments as comma separated list.
 *Supported file formats:* xml, yaml
@@ -116,7 +116,7 @@ In gcp there is a kerberos test under kerberos directory and a recipe test under
 
 ```
 name: Resource_tests
-parameters:
+codeGrantFlowInitParams:
   cleanUp: false
 
 tests:
@@ -126,7 +126,7 @@ tests:
       - com.sequenceiq.it.cloudbreak.CloudbreakTestSuiteInitializer
 
   - name: gcp_template_test
-    parameters:
+    codeGrantFlowInitParams:
       gcpName: it-gcp-template-restest
       templateName: it-gcp-template-restest
       gcpInstanceType: n1-standard-4
@@ -139,7 +139,7 @@ tests:
       - com.sequenceiq.it.cloudbreak.TemplateDeleteByNameTest
 
   - name: blueprint_test
-    parameters:
+    codeGrantFlowInitParams:
       blueprintName: it-blueprint-restest
       blueprintFile: classpath:/blueprint/multi-node-hdfs-yarn.bp
     classes:
@@ -148,20 +148,20 @@ tests:
 
   # integratontest.gcpcredential params must be set in application.yml
   - name: gcp_credential_test
-    parameters:
+    codeGrantFlowInitParams:
       credentialName: it-gcp-credential-restest
     classes:
       - com.sequenceiq.it.cloudbreak.GcpCredentialCreationTest
       - com.sequenceiq.it.cloudbreak.CredentialDeleteByNameTest
 ```
 
-All test has its own parameter set which you have to define. There are application level, suite level and test level parameters.
+All test has its own parameter set which you have to define. There are application level, suite level and test level codeGrantFlowInitParams.
 In the example `cleanUp` is a suite level parameter and all the tests will get where it is defined as test parameter, but `gcpName` parameter only visible for the gcp_template_test tests.
 
 ### Test suite example with existing credential, blueprint resources:
 ```
 name: OpenStack_full_smoketest_cred
-parameters:
+codeGrantFlowInitParams:
   cloudProvider: OPENSTACK
   blueprintName: testbp
   credentialName: openstack
@@ -177,7 +177,7 @@ tests:
       - com.sequenceiq.it.cloudbreak.CloudbreakTestSuiteInitializer
 
   - name: create cluster
-    parameters:
+    codeGrantFlowInitParams:
       stackName: it-openstack-cred-ssud
       region: local
       clusterName: it-openstack-cred-ssud
@@ -186,19 +186,19 @@ tests:
       - com.sequenceiq.it.cloudbreak.ClusterCreationTest
 
   - name: stop cluster and stack
-    parameters:
+    codeGrantFlowInitParams:
       waitOn: true
     classes:
       - com.sequenceiq.it.cloudbreak.startstop.ClusterAndStackStopTest
 
   - name: start stack and cluster
-    parameters:
+    codeGrantFlowInitParams:
       waitOn: true
     classes:
       - com.sequenceiq.it.cloudbreak.startstop.StackAndClusterStartTest
 
   - name: upscale stack, upscale cluster
-    parameters:
+    codeGrantFlowInitParams:
      instanceGroup: slave_1
      scalingAdjustment: 4
     classes:
@@ -206,7 +206,7 @@ tests:
       - com.sequenceiq.it.cloudbreak.scaling.ClusterScalingTest
 
   - name: downscale cluster, downscale stack
-    parameters:
+    codeGrantFlowInitParams:
      instanceGroup: slave_1
      scalingAdjustment: -2
     classes:
@@ -215,11 +215,11 @@ tests:
 
 ```
 
-In the example `cloudProvider` is a suite level parameter and `CloudbreakTestSuiteInitializer` will initialize the test context based on the application level `gcp` parameters.
+In the example `cloudProvider` is a suite level parameter and `CloudbreakTestSuiteInitializer` will initialize the test context based on the application level `gcp` codeGrantFlowInitParams.
 
 #### Suite level parameter
 
-**Basic parameters (overwrite the environment variable for the actual suite):**
+**Basic codeGrantFlowInitParams (overwrite the environment variable for the actual suite):**
 * uaaServer - url of uaa server
 * uaaUser - uaa user
 * uaaPassword - uaa password
@@ -305,11 +305,11 @@ tests:
   * OpenStackNetworkCreationTest
 
 In a suite you can assemble the above mentioned tests in given order. Every suite has its own context in which the tests can share information with each other. (for example BlueprintCreationTest put the created blueprint's id into the context which is necessary for stack creation, etc)
-You can define parameters for the tests as well, for example GcpTempateCreationTest:
+You can define codeGrantFlowInitParams for the tests as well, for example GcpTempateCreationTest:
 
 ```
   - name: create master template
-    parameters: {
+    codeGrantFlowInitParams: {
       gcpName: it-gcp-smoke-master-ssud,
       gcpInstanceType: n1-highmem-8,
       volumeType: pd-standard,

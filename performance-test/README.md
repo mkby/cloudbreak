@@ -164,9 +164,9 @@ Please run cb with following V2 cluster request to create a cluster.
   },
   "instanceGroups": [
     {
-      "parameters": {},
+      "codeGrantFlowInitParams": {},
       "template": {
-        "parameters": {},
+        "codeGrantFlowInitParams": {},
         "instanceType": "m5.2xlarge",
         "volumeType": "ssd",
         "volumeCount": 1,
@@ -203,9 +203,9 @@ Please run cb with following V2 cluster request to create a cluster.
       }
     },
     {
-      "parameters": {},
+      "codeGrantFlowInitParams": {},
       "template": {
-        "parameters": {},
+        "codeGrantFlowInitParams": {},
         "instanceType": "m5.xlarge",
         "volumeType": "ssd",
         "volumeCount": 1,
@@ -233,7 +233,7 @@ Please run cb with following V2 cluster request to create a cluster.
     }
   ],
   "network": {
-    "parameters": {},
+    "codeGrantFlowInitParams": {},
     "subnetCIDR": "10.0.0.0/16"
   },
   "stackAuthentication": {
@@ -294,7 +294,7 @@ There is also a `simulation.log` file that contains all the executed queries and
 
 ### Parameters
 
-In perftest.sh you can fiddle with following parameters:
+In perftest.sh you can fiddle with following codeGrantFlowInitParams:
 
 * CB_NUMBER_OF_USERS: number of concurrent users. 
 * CB_RAMPUP_SECONDS: See [Injection profile](https://gatling.io/docs/2.3/general/simulation_setup/#injection). We currently use rampUsers(CB_NUMBER_OF_USERS) over (RAMPUP_SECONDS)

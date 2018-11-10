@@ -2,7 +2,7 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters" : {
+    "codeGrantFlowInitParams" : {
         "userImageStorageAccountName": {
             "type": "string",
             "defaultValue" : "${storage_account_name}"
@@ -78,14 +78,14 @@
         }
     },
   	"variables" : {
-      "userImageName" : "[concat('https://',parameters('userImageStorageAccountName'),'.blob.core.windows.net/',parameters('userImageStorageContainerName'),'/',parameters('userImageVhdName'))]",
-      "osDiskVhdName" : "[concat('https://',parameters('userImageStorageAccountName'),'.blob.core.windows.net/',parameters('userDataStorageContainerName'),'/',parameters('vmNamePrefix'),'osDisk')]",
+      "userImageName" : "[concat('https://',codeGrantFlowInitParams('userImageStorageAccountName'),'.blob.core.windows.net/',codeGrantFlowInitParams('userImageStorageContainerName'),'/',codeGrantFlowInitParams('userImageVhdName'))]",
+      "osDiskVhdName" : "[concat('https://',codeGrantFlowInitParams('userImageStorageAccountName'),'.blob.core.windows.net/',codeGrantFlowInitParams('userDataStorageContainerName'),'/',codeGrantFlowInitParams('vmNamePrefix'),'osDisk')]",
       <#if existingVPC>
-      "vnetID": "[resourceId(parameters('resourceGroupName'),'Microsoft.Network/virtualNetworks',parameters('existingVNETName'))]",
-      "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',parameters('existingSubnetName'))]",
+      "vnetID": "[resourceId(codeGrantFlowInitParams('resourceGroupName'),'Microsoft.Network/virtualNetworks',codeGrantFlowInitParams('existingVNETName'))]",
+      "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',codeGrantFlowInitParams('existingSubnetName'))]",
       <#else>
-      "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkNamePrefix'))]",
-      "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',parameters('subnet1Name'))]",
+      "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',codeGrantFlowInitParams('virtualNetworkNamePrefix'))]",
+      "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',codeGrantFlowInitParams('subnet1Name'))]",
       </#if>
       <#list igs as group>
       "${group.compressedName}secGroupName": "${group.compressedName}${stackname}sg",
@@ -95,7 +95,7 @@
           "${group.compressedName}AsUpdateDomainCount": ${group.platformUpdateDomainCount},
           </#if>
       </#list>
-      "sshKeyPath" : "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]"
+      "sshKeyPath" : "[concat('/home/',codeGrantFlowInitParams('adminUsername'),'/.ssh/authorized_keys')]"
   	},
     "resources": [
             <#list igs as group>
@@ -135,19 +135,19 @@
                       </#list>
                  },
                  </#if>
-                 "name": "[parameters('virtualNetworkNamePrefix')]",
-                 "location": "[parameters('region')]",
+                 "name": "[codeGrantFlowInitParams('virtualNetworkNamePrefix')]",
+                 "location": "[codeGrantFlowInitParams('region')]",
                  "properties": {
                      "addressSpace": {
                          "addressPrefixes": [
-                             "[parameters('subnet1Prefix')]"
+                             "[codeGrantFlowInitParams('subnet1Prefix')]"
                          ]
                      },
                      "subnets": [
                          {
-                             "name": "[parameters('subnet1Name')]",
+                             "name": "[codeGrantFlowInitParams('subnet1Name')]",
                              "properties": {
-                                 "addressPrefix": "[parameters('subnet1Prefix')]"
+                                 "addressPrefix": "[codeGrantFlowInitParams('subnet1Prefix')]"
                              }
                          }
                      ]
@@ -160,7 +160,7 @@
                "apiVersion": "2015-05-01-preview",
                "type": "Microsoft.Network/networkSecurityGroups",
                "name": "[variables('${group.compressedName}secGroupName')]",
-               "location": "[parameters('region')]",
+               "location": "[codeGrantFlowInitParams('region')]",
                <#if userDefinedTags?? && userDefinedTags?has_content>
                "tags": {
                     <#list userDefinedTags?keys as key>
@@ -209,8 +209,8 @@
                  {
                    "apiVersion": "2015-05-01-preview",
                    "type": "Microsoft.Network/publicIPAddresses",
-                   "name": "[concat(parameters('publicIPNamePrefix'), '${instance.instanceId}')]",
-                   "location": "[parameters('region')]",
+                   "name": "[concat(codeGrantFlowInitParams('publicIPNamePrefix'), '${instance.instanceId}')]",
+                   "location": "[codeGrantFlowInitParams('region')]",
                    <#if userDefinedTags?? && userDefinedTags?has_content>
                    "tags": {
                         <#list userDefinedTags?keys as key>
@@ -230,8 +230,8 @@
                  {
                    "apiVersion": "2015-05-01-preview",
                    "type": "Microsoft.Network/networkInterfaces",
-                   "name": "[concat(parameters('nicNamePrefix'), '${instance.instanceId}')]",
-                   "location": "[parameters('region')]",
+                   "name": "[concat(codeGrantFlowInitParams('nicNamePrefix'), '${instance.instanceId}')]",
+                   "location": "[codeGrantFlowInitParams('region')]",
                    <#if userDefinedTags?? && userDefinedTags?has_content>
                    "tags": {
                         <#list userDefinedTags?keys as key>
@@ -245,11 +245,11 @@
                        </#if>
                        <#if !noPublicIp>
                        <#if !noFirewallRules>,</#if>
-                       "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPNamePrefix'), '${instance.instanceId}')]"
+                       "[concat('Microsoft.Network/publicIPAddresses/', codeGrantFlowInitParams('publicIPNamePrefix'), '${instance.instanceId}')]"
                        </#if>
                        <#if !existingVPC>
                        <#if !noFirewallRules || !noPublicIp>,</#if>
-                       "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkNamePrefix'))]"
+                       "[concat('Microsoft.Network/virtualNetworks/', codeGrantFlowInitParams('virtualNetworkNamePrefix'))]"
                        </#if>
                    ],
                    "properties": {
@@ -265,7 +265,7 @@
                                    "privateIPAllocationMethod": "Dynamic",
                                    <#if !noPublicIp>
                                    "publicIPAddress": {
-                                       "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat(parameters('publicIPNamePrefix'), '${instance.instanceId}'))]"
+                                       "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat(codeGrantFlowInitParams('publicIPNamePrefix'), '${instance.instanceId}'))]"
                                    },
                                    </#if>
                                    "subnet": {
@@ -279,13 +279,13 @@
                  {
                    "apiVersion": "2016-04-30-preview",
                    "type": "Microsoft.Compute/virtualMachines",
-                   "name": "[concat(parameters('vmNamePrefix'), '${instance.instanceId}')]",
-                   "location": "[parameters('region')]",
+                   "name": "[concat(codeGrantFlowInitParams('vmNamePrefix'), '${instance.instanceId}')]",
+                   "location": "[codeGrantFlowInitParams('region')]",
                    "dependsOn": [
                     <#if instance.availabilitySetName?? && instance.availabilitySetName?has_content>
                        "[concat('Microsoft.Compute/availabilitySets/', '${instance.availabilitySetName}')]",
                     </#if>
-                       "[concat('Microsoft.Network/networkInterfaces/', parameters('nicNamePrefix'), '${instance.instanceId}')]"
+                       "[concat('Microsoft.Network/networkInterfaces/', codeGrantFlowInitParams('nicNamePrefix'), '${instance.instanceId}')]"
                    ],
                    <#if userDefinedTags?? && userDefinedTags?has_content>
                    "tags": {
@@ -305,7 +305,7 @@
                        },
                        "osProfile": {
                            "computername": "${instance.hostName}",
-                           "adminUsername": "[parameters('adminUsername')]",
+                           "adminUsername": "[codeGrantFlowInitParams('adminUsername')]",
                            <#if disablePasswordAuthentication == false>
                            "adminPassword": "${credential.password}",
                            </#if>
@@ -316,7 +316,7 @@
                                     <#if disablePasswordAuthentication == true>
                                        {
                                            "path": "[variables('sshKeyPath')]",
-                                           "keyData": "[parameters('sshKeyData')]"
+                                           "keyData": "[codeGrantFlowInitParams('sshKeyData')]"
                                        }
                                     </#if>
                                    ]
@@ -339,7 +339,7 @@
                                     "uri" : "[concat(variables('osDiskVhdName'), '${instance.instanceId}','.vhd')]"
                                },
                                </#if>
-                               "name" : "[concat(parameters('vmNamePrefix'),'-osDisk', '${instance.instanceId}')]",
+                               "name" : "[concat(codeGrantFlowInitParams('vmNamePrefix'),'-osDisk', '${instance.instanceId}')]",
                                "osType" : "linux",
                                "createOption": "FromImage"
                            },
@@ -356,7 +356,7 @@
                                    "lun":  ${volume_index},
                                    <#if instance.managedDisk == false>
                                    "vhd": {
-                                        "Uri": "[concat('${instance.attachedDiskStorageUrl}',parameters('userDataStorageContainerName'),'/',parameters('vmNamePrefix'),'datadisk','${instance.instanceId}', '${volume_index}', '.vhd')]"
+                                        "Uri": "[concat('${instance.attachedDiskStorageUrl}',codeGrantFlowInitParams('userDataStorageContainerName'),'/',codeGrantFlowInitParams('vmNamePrefix'),'datadisk','${instance.instanceId}', '${volume_index}', '.vhd')]"
                                    },
                                    </#if>
                                    "caching": "None",
@@ -368,7 +368,7 @@
                        "networkProfile": {
                            "networkInterfaces": [
                                {
-                                   "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('nicNamePrefix'), '${instance.instanceId}'))]"
+                                   "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(codeGrantFlowInitParams('nicNamePrefix'), '${instance.instanceId}'))]"
                                }
                            ]
                        }

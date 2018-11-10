@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -108,21 +108,9 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
     /**
      * @return the URL to authenticate through OAuth2
      */
-    public String generateAuthenticationUrl() {
-        return String.format("%s/%s/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=%s&response_mode=query&state=%s",
-                environment().activeDirectoryEndpoint(), domain(), clientId(), this.redirectUrl, UUID.randomUUID());
-    }
-
-    /**
-     * Generate the URL to authenticate through OAuth2.
-     *
-     * @param responseMode the method that should be used to send the resulting token back to your app
-     * @param state a value included in the request that is also returned in the token response
-     * @return the URL to authenticate through OAuth2
-     */
-    public String generateAuthenticationUrl(ResponseMode responseMode, String state) {
-        return String.format("%s/%s/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=%s&response_mode=%s&state=%s",
-                environment().activeDirectoryEndpoint(), domain(), clientId(), this.redirectUrl, responseMode.value, state);
+    public String generateAuthenticationUrl(String state) {
+        return String.format("%s/%s/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=%s&response_mode=query&state=%s&resource=%s",
+                environment().activeDirectoryEndpoint(), domain(), clientId(), this.redirectUrl, state, environment().managementEndpoint());
     }
 
     /**
@@ -160,6 +148,10 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
         }
         tokens.put(resource, authenticationResult);
         return authenticationResult.getAccessToken();
+    }
+
+    public Map<String, AuthenticationResult> getTokens() {
+        return new HashMap<>(tokens);
     }
 
     AuthenticationResult acquireNewAccessToken(String resource) throws IOException {

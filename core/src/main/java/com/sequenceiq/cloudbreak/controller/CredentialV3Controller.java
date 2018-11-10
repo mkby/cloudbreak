@@ -94,4 +94,18 @@ public class CredentialV3Controller extends NotificationController implements Cr
         Workspace workspace = workspaceService.get(restRequestThreadLocalService.getRequestedWorkspaceId(), user);
         return credentialService.getPrerequisites(user, workspace, platform);
     }
+
+    @Override
+    public String initCodeGrantFlow(Long workspaceId, CredentialRequest credentialRequest) {
+        User user = userService.getOrCreate(restRequestThreadLocalService.getCloudbreakUser());
+        return credentialService.initCodeGrantFlow(workspaceId, conversionService.convert(credentialRequest, Credential.class), user);
+    }
+
+    @Override
+    public CredentialResponse authorizeCodeGrantFlow(Long workspaceId, String platform, String code, String state) {
+        User user = userService.getOrCreate(restRequestThreadLocalService.getCloudbreakUser());
+        Credential credential = credentialService.authorizeCodeGrantFlow(code, state, workspaceId, user, platform);
+        notify(ResourceEvent.CREDENTIAL_CREATED);
+        return conversionService.convert(credential, CredentialResponse.class);
+    }
 }

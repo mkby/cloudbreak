@@ -115,7 +115,7 @@ You can track the Periscope's logs to check the results by executing the followi
 cbd logs periscope
 ```
 
-If everything went well then Cloudbreak will be available on http://YOUR_IP. For more details and config parameters please check the documentation of [Cloudbreak Deployer](https://github.com/hortonworks/cloudbreak-deployer).
+If everything went well then Cloudbreak will be available on http://YOUR_IP. For more details and config codeGrantFlowInitParams please check the documentation of [Cloudbreak Deployer](https://github.com/hortonworks/cloudbreak-deployer).
 
 The deployer has generated a `certs` directory under `cbd-local` directory which will be needed later on to set up IDEA properly.
 
@@ -185,7 +185,7 @@ In order to be able to determine the local Cloudbreak version automatically, a `
 1. Open `Run/Debug Configurations` for the project
 2. Select your project's application
 3. Click on `Add` in the `Before launch` panel
-4. Select `Run Gradle Task` with the following parameters
+4. Select `Run Gradle Task` with the following codeGrantFlowInitParams
     1. `Gradle project`: cloudbreak:core
     2. `Tasks`: buildInfo
 5. Confirm and restart the application
@@ -212,7 +212,7 @@ The -Dperiscope.client.secret=PERISCOPE_SECRET_GENERATED_BY_CBD value has to be 
 ## Command line
 
 ### Cloudbreak
-To run Cloudbreak from command line, you have to list the JVM parameters from above for gradle:
+To run Cloudbreak from command line, you have to list the JVM codeGrantFlowInitParams from above for gradle:
 
 ```
 ./gradlew :core:buildInfo :core:bootRun -PjvmArgs="-Dcb.cert.dir=FULL_PATH_OF_THE_CERTS_DIR_GENERATED_BY_CBD \
@@ -235,7 +235,7 @@ The `-Dcb.client.secret=CB_SECRET_GENERATED_BY_CBD` value has to be replaced wit
 The database migration scripts run automatically by Cloudbreak by default, this migration can be turned off with the `-Dcb.schema.migration.auto=false` VM option.
 
 ### Periscope
-To run periscope from command line you have to run the below gradle command with the following list of JVM parameters:
+To run periscope from command line you have to run the below gradle command with the following list of JVM codeGrantFlowInitParams:
 
 ````
 ./gradlew :autoscale:bootRun -PjvmArgs="-Dperiscope.client.id=periscope \
@@ -255,7 +255,7 @@ The `-Dcb.client.secret=CB_SECRET_GENERATED_BY_CBD` value has to be replaced wit
 
 ## Database development
 
-If any schema change is required in Cloudbreak database (cbdb), then the developer needs to write SQL scripts to migrate the database accordingly. The schema migration is managed by [MYBATIS Migrations](https://github.com/mybatis/migrations) in Cloudbreak and the cbd tool provides an easy-to-use wrapper for it. The syntax for using the migration commands is `cbd migrate <database name> <command> [parameters]` e.g. `cbd migrate migrate status`.
+If any schema change is required in Cloudbreak database (cbdb), then the developer needs to write SQL scripts to migrate the database accordingly. The schema migration is managed by [MYBATIS Migrations](https://github.com/mybatis/migrations) in Cloudbreak and the cbd tool provides an easy-to-use wrapper for it. The syntax for using the migration commands is `cbd migrate <database name> <command> [codeGrantFlowInitParams]` e.g. `cbd migrate migrate status`.
 
 Create a SQL template for schema changes:
 ```

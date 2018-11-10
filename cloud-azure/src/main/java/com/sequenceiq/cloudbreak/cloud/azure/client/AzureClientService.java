@@ -24,7 +24,7 @@ public class AzureClientService {
 
     public AzureClient getClient(CloudCredential cloudCredential) {
         AzureCredentialView azureCredentialView = new AzureCredentialView(cloudCredential);
-        return new AzureClient(azureCredentialView.getTenantId(), azureCredentialView.getAccessKey(),
-                azureCredentialView.getSecretKey(), azureCredentialView.getSubscriptionId(), logLevel);
+        AzureClientCredentials azureClientCredentials = new AzureClientCredentials(azureCredentialView, logLevel);
+        return new AzureClient(azureClientCredentials);
     }
 }

@@ -170,7 +170,7 @@ public class CredentialServiceTest {
         verify(credentialRepository, times(0)).findActiveByNameAndWorkspaceIdFilterByPlatforms(anyString(), anyLong(), anyCollection());
         verify(preferencesService, times(0)).enabledPlatforms();
         verify(workspaceService, times(0)).get(anyLong(), any(User.class));
-        verify(credentialAdapter, times(0)).init(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(0)).verify(any(Credential.class), anyLong(), anyString());
         verify(credentialRepository, times(0)).save(any());
     }
 
@@ -187,7 +187,7 @@ public class CredentialServiceTest {
         verify(credentialRepository, times(1)).findActiveByNameAndWorkspaceIdFilterByPlatforms(TEST_CREDENTIAL_NAME, ORG_ID, CLOUD_PLATFORMS);
         verify(preferencesService, times(1)).enabledPlatforms();
         verify(workspaceService, times(0)).get(anyLong(), any(User.class));
-        verify(credentialAdapter, times(0)).init(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(0)).verify(any(Credential.class), anyLong(), anyString());
         verify(credentialRepository, times(0)).save(any());
     }
 
@@ -208,7 +208,7 @@ public class CredentialServiceTest {
         verify(credentialRepository, times(1)).findActiveByNameAndWorkspaceIdFilterByPlatforms(TEST_CREDENTIAL_NAME, ORG_ID, CLOUD_PLATFORMS);
         verify(preferencesService, times(1)).enabledPlatforms();
         verify(workspaceService, times(0)).get(anyLong(), any(User.class));
-        verify(credentialAdapter, times(0)).init(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(0)).verify(any(Credential.class), anyLong(), anyString());
         verify(credentialRepository, times(0)).save(any());
     }
 
@@ -220,7 +220,7 @@ public class CredentialServiceTest {
         when(testCredential.cloudPlatform()).thenReturn(TEST_CLOUD_PLATFORM);
         doNothing().when(credentialValidator).validateCredentialCloudPlatform(anyString());
         when(credentialRepository.findActiveByNameAndWorkspaceIdFilterByPlatforms(TEST_CREDENTIAL_NAME, ORG_ID, CLOUD_PLATFORMS)).thenReturn(original);
-        when(credentialAdapter.init(testCredential, ORG_ID, USER_ID)).thenReturn(testCredential);
+        when(credentialAdapter.verify(testCredential, ORG_ID, USER_ID)).thenReturn(testCredential);
         when(workspaceService.get(anyLong(), any())).thenReturn(workspace);
         when(workspaceService.retrieveForUser(any())).thenReturn(Set.of(workspace));
         when(credentialRepository.save(any())).thenReturn(saved);
@@ -233,8 +233,8 @@ public class CredentialServiceTest {
         verify(preferencesService, times(1)).enabledPlatforms();
         verify(workspaceService, times(2)).get(anyLong(), any(User.class));
         verify(workspaceService, times(2)).get(ORG_ID, user);
-        verify(credentialAdapter, times(1)).init(any(Credential.class), anyLong(), anyString());
-        verify(credentialAdapter, times(1)).init(testCredential, ORG_ID, USER_ID);
+        verify(credentialAdapter, times(1)).verify(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(1)).verify(testCredential, ORG_ID, USER_ID);
         verify(notificationSender, times(1)).send(any());
         verify(messagesService, times(1)).getMessage(ResourceEvent.CREDENTIAL_MODIFIED.getMessage());
     }
@@ -254,7 +254,7 @@ public class CredentialServiceTest {
 
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(anyString());
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(invalidCloudPlatformValue);
-        verify(credentialAdapter, times(0)).init(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(0)).verify(any(Credential.class), anyLong(), anyString());
         verify(notificationSender, times(0)).send(any());
         verify(messagesService, times(0)).getMessage(anyString());
     }
@@ -263,7 +263,7 @@ public class CredentialServiceTest {
     public void testCreateWhenCredentialCloudPlatformIsValidAndCredentialValuesAreFineThenCredentialWillBeSaved() {
         Credential expected = new Credential();
         when(testCredential.cloudPlatform()).thenReturn(TEST_CLOUD_PLATFORM);
-        when(credentialAdapter.init(testCredential, ORG_ID, USER_ID)).thenReturn(testCredential);
+        when(credentialAdapter.verify(testCredential, ORG_ID, USER_ID)).thenReturn(testCredential);
         when(workspaceService.get(anyLong(), any())).thenReturn(workspace);
         when(workspaceService.retrieveForUser(any())).thenReturn(Set.of(workspace));
         when(credentialRepository.save(any())).thenReturn(expected);
@@ -274,8 +274,8 @@ public class CredentialServiceTest {
 
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(anyString());
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(TEST_CLOUD_PLATFORM);
-        verify(credentialAdapter, times(1)).init(any(Credential.class), anyLong(), anyString());
-        verify(credentialAdapter, times(1)).init(testCredential, ORG_ID, USER_ID);
+        verify(credentialAdapter, times(1)).verify(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(1)).verify(testCredential, ORG_ID, USER_ID);
         verify(notificationSender, times(1)).send(any());
         verify(messagesService, times(1)).getMessage(ResourceEvent.CREDENTIAL_CREATED.getMessage());
     }
@@ -295,7 +295,7 @@ public class CredentialServiceTest {
 
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(anyString());
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(invalidCloudPlatformValue);
-        verify(credentialAdapter, times(0)).init(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(0)).verify(any(Credential.class), anyLong(), anyString());
         verify(notificationSender, times(0)).send(any());
         verify(messagesService, times(0)).getMessage(anyString());
     }
@@ -304,7 +304,7 @@ public class CredentialServiceTest {
     public void testCreateWithRetryWhenCredentialCloudPlatformIsValidAndCredentialValuesAreFineThenCredentialWillBeSaved() {
         Credential expected = new Credential();
         when(testCredential.cloudPlatform()).thenReturn(TEST_CLOUD_PLATFORM);
-        when(credentialAdapter.init(testCredential, ORG_ID, USER_ID)).thenReturn(testCredential);
+        when(credentialAdapter.verify(testCredential, ORG_ID, USER_ID)).thenReturn(testCredential);
         when(workspaceService.get(anyLong(), any())).thenReturn(workspace);
         when(workspaceService.retrieveForUser(any())).thenReturn(Set.of(workspace));
         when(credentialRepository.save(any())).thenReturn(expected);
@@ -313,8 +313,8 @@ public class CredentialServiceTest {
 
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(anyString());
         verify(credentialValidator, times(1)).validateCredentialCloudPlatform(TEST_CLOUD_PLATFORM);
-        verify(credentialAdapter, times(1)).init(any(Credential.class), anyLong(), anyString());
-        verify(credentialAdapter, times(1)).init(testCredential, ORG_ID, USER_ID);
+        verify(credentialAdapter, times(1)).verify(any(Credential.class), anyLong(), anyString());
+        verify(credentialAdapter, times(1)).verify(testCredential, ORG_ID, USER_ID);
         verify(notificationSender, times(1)).send(any());
         verify(messagesService, times(1)).getMessage(ResourceEvent.CREDENTIAL_CREATED.getMessage());
     }

@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+
 import javax.inject.Inject;
 
 import org.junit.Test;
@@ -20,6 +22,7 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.ui.freemarker.FreeMarkerConfigurationFactoryBean;
 
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
@@ -38,6 +41,9 @@ import com.sequenceiq.cloudbreak.cloud.transform.CloudResourceHelper;
 import com.sequenceiq.cloudbreak.common.service.DefaultCostTaggingService;
 import com.sequenceiq.cloudbreak.concurrent.MDCCleanerTaskDecorator;
 import com.sequenceiq.cloudbreak.service.Retry;
+import com.sequenceiq.cloudbreak.util.FreeMarkerTemplateUtils;
+
+import freemarker.template.TemplateException;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = AwsTestContext.class)
@@ -77,9 +83,6 @@ public class AwsComponentTest {
         private Retry defaultRetryService;
 
         @MockBean
-        private freemarker.template.Configuration configurationProvider;
-
-        @MockBean
         private DefaultCostTaggingService defaultCostTaggingService;
 
         @MockBean
@@ -103,13 +106,31 @@ public class AwsComponentTest {
         @MockBean
         private AmazonCloudFormationRetryClient amazonCloudFormationRetryClient;
 
+        @MockBean
+        private FreeMarkerTemplateUtils freeMarkerTemplateUtils;
+
+        @MockBean
+        private AmazonEC2Client amazonEC2Client;
+
         @Bean
         public AwsClient awsClient(){
             AwsClient awsClient= mock(AwsClient.class);
-            when(awsClient.createAccess(any(), anyString())).thenReturn(mock(AmazonEC2Client.class));
-            when(awsClient.createAccess(any())).thenReturn(mock(AmazonEC2Client.class));
+            when(awsClient.createAccess(any(), anyString())).thenReturn(amazonEC2Client);
+            when(awsClient.createAccess(any())).thenReturn(amazonEC2Client);
             when(awsClient.createCloudFormationRetryClient(any(), anyString())).thenReturn(amazonCloudFormationRetryClient);
             return awsClient;
+        }
+
+//        @MockBean
+//        private freemarker.template.Configuration configurationProvider;
+
+        @Bean
+        public freemarker.template.Configuration configurationProvider() throws IOException, TemplateException {
+            FreeMarkerConfigurationFactoryBean factoryBean = new FreeMarkerConfigurationFactoryBean();
+            factoryBean.setPreferFileSystemAccess(false);
+            factoryBean.setTemplateLoaderPath("classpath:/");
+            factoryBean.afterPropertiesSet();
+            return factoryBean.getObject();
         }
 
         @Bean

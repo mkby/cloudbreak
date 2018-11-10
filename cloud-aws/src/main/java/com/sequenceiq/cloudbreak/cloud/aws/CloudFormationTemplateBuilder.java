@@ -1,7 +1,5 @@
 package com.sequenceiq.cloudbreak.cloud.aws;
 
-import static com.sequenceiq.cloudbreak.util.FreeMarkerTemplateUtils.processTemplateIntoString;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +20,7 @@ import com.sequenceiq.cloudbreak.cloud.exception.CloudConnectorException;
 import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
 import com.sequenceiq.cloudbreak.common.service.DefaultCostTaggingService;
+import com.sequenceiq.cloudbreak.util.FreeMarkerTemplateUtils;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -34,6 +33,9 @@ public class CloudFormationTemplateBuilder {
 
     @Inject
     private DefaultCostTaggingService defaultCostTaggingService;
+
+    @Inject
+    private FreeMarkerTemplateUtils freeMarkerTemplateUtils;
 
     public String build(ModelContext context) {
         Map<String, Object> model = new HashMap<>();
@@ -79,7 +81,7 @@ public class CloudFormationTemplateBuilder {
         model.put("mapPublicIpOnLaunch", context.mapPublicIpOnLaunch);
         model.putAll(defaultCostTaggingService.prepareAllTagsForTemplate());
         try {
-            String template = processTemplateIntoString(new Template("aws-template", context.template, freemarkerConfiguration), model);
+            String template = freeMarkerTemplateUtils.processTemplateIntoString(new Template("aws-template", context.template, freemarkerConfiguration), model);
             return template.replaceAll("\\t|\\n| [\\s]+", "");
         } catch (IOException | TemplateException e) {
             throw new CloudConnectorException("Failed to process CloudFormation freemarker template", e);

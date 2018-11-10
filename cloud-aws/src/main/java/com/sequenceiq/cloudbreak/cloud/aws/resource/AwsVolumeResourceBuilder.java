@@ -201,6 +201,7 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
         if (!volumeSetAttributes.getDeleteOnTermination()) {
             resource.setInstanceId(null);
             volumeSetAttributes.setDeleteOnTermination(Boolean.FALSE);
+            resource.putParameter(CloudResource.ATTRIBUTES, volumeSetAttributes);
             resourceNotifier.notifyUpdate(resource, auth.getCloudContext());
             throw new InterruptedException("Resource will be preserved for later reattachment.");
         }

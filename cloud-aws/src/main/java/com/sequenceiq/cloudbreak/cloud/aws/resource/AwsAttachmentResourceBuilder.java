@@ -94,7 +94,7 @@ public class AwsAttachmentResourceBuilder extends AbstractAwsComputeBuilder {
 
     @Override
     public ResourceType resourceType() {
-        return ResourceType.AWS_INSTANCE;
+        return ResourceType.AWS_VOLUMESET;
     }
 
     @Override

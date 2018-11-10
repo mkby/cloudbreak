@@ -29,6 +29,7 @@ import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsPlatformParameters;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsPlatformResources;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsTagValidator;
+import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.component.AwsComponentTest.AwsTestContext;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
@@ -112,12 +113,16 @@ public class AwsComponentTest {
         @MockBean
         private AmazonEC2Client amazonEC2Client;
 
+        @MockBean
+        private AmazonAutoScalingRetryClient amazonAutoScalingRetryClient;
+
         @Bean
         public AwsClient awsClient(){
             AwsClient awsClient= mock(AwsClient.class);
             when(awsClient.createAccess(any(), anyString())).thenReturn(amazonEC2Client);
             when(awsClient.createAccess(any())).thenReturn(amazonEC2Client);
             when(awsClient.createCloudFormationRetryClient(any(), anyString())).thenReturn(amazonCloudFormationRetryClient);
+            when(awsClient.createAutoScalingRetryClient(any(), anyString())).thenReturn(amazonAutoScalingRetryClient);
             return awsClient;
         }
 

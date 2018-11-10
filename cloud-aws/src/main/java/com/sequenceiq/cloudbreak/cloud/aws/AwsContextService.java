@@ -20,7 +20,9 @@ public class AwsContextService {
         groups.forEach(group -> {
             List<Long> ids = group.getInstances().stream()
                     .filter(instance -> Objects.isNull(instance.getInstanceId()))
-                    .map(CloudInstance::getTemplate).map(InstanceTemplate::getPrivateId).collect(Collectors.toList());
+                    .map(CloudInstance::getTemplate)
+                    .map(InstanceTemplate::getPrivateId)
+                    .collect(Collectors.toList());
             List<CloudResource> groupInstances = instances.stream().filter(inst -> inst.getGroup().equals(group.getName())).collect(Collectors.toList());
             for (int i = 0; i < ids.size(); i++) {
                 context.addComputeResources(ids.get(i), List.of(groupInstances.get(i)));

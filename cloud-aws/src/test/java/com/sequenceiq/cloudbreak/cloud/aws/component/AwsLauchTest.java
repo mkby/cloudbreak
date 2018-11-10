@@ -20,15 +20,33 @@ import java.util.Map;
 import javax.inject.Inject;
 
 import org.junit.Test;
+import org.mockito.stubbing.Answer;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.MockBeans;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.autoscaling.model.AutoScalingGroup;
+import com.amazonaws.services.autoscaling.model.DescribeAutoScalingGroupsResult;
+import com.amazonaws.services.autoscaling.model.DescribeScalingActivitiesResult;
+import com.amazonaws.services.autoscaling.model.Instance;
+import com.amazonaws.services.autoscaling.model.LifecycleState;
+import com.amazonaws.services.cloudformation.model.DescribeStackResourceResult;
+import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
+import com.amazonaws.services.cloudformation.model.Output;
+import com.amazonaws.services.cloudformation.model.Stack;
+import com.amazonaws.services.cloudformation.model.StackResourceDetail;
 import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.amazonaws.services.ec2.model.DescribeImagesRequest;
+import com.amazonaws.services.ec2.model.CreateVolumeResult;
 import com.amazonaws.services.ec2.model.DescribeImagesResult;
+import com.amazonaws.services.ec2.model.DescribeInstanceStatusResult;
+import com.amazonaws.services.ec2.model.DescribeVolumesRequest;
+import com.amazonaws.services.ec2.model.DescribeVolumesResult;
+import com.amazonaws.services.ec2.model.InstanceState;
+import com.amazonaws.services.ec2.model.VolumeState;
 import com.google.common.collect.ImmutableMap;
+import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
+import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
@@ -54,7 +72,8 @@ import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
 import com.sequenceiq.cloudbreak.util.FreeMarkerTemplateUtils;
 
 @MockBeans({
-        @MockBean(AwsCreateStackStatusCheckerTask.class)
+        @MockBean(AwsCreateStackStatusCheckerTask.class),
+//        @MockBean(Aws)
 })
 public class AwsLauchTest extends AwsComponentTest {
 
@@ -68,7 +87,19 @@ public class AwsLauchTest extends AwsComponentTest {
 
     private static final String GATEWAY_CUSTOM_DATA = "GATEWAY";
 
-    public static final String CIDR = "10.10.10.10/16";
+    private static final String CIDR = "10.10.10.10/16";
+
+    private static final int INSTANCE_STATE_RUNNING = 16;
+
+    private static final String AUTOSCALING_GROUP_NAME = "autoscalingGroupName";
+
+    private static final String INSTANCE_ID = "instanceId";
+
+    private static final String VOLUME_ID = "New Volume Id";
+
+    private static int s_volumeIndex = 1;
+
+    private static boolean s_describeVolumeRequestFirstInvocation = true;
 
     @Inject
     private AwsResourceConnector awsResourceConnector;
@@ -94,19 +125,112 @@ public class AwsLauchTest extends AwsComponentTest {
     @Inject
     private AwsCreateStackStatusCheckerTask awsCreateStackStatusCheckerTask;
 
+    @Inject
+    private AmazonAutoScalingRetryClient amazonAutoScalingRetryClient;
+
     @Test
     public void launchStack() throws Exception {
-        when(amazonCloudFormationRetryClient.describeStacks(any())).thenThrow(new AmazonServiceException("stack is supposed to exist in test"));
+        setupDescribeStacksResponses();
         when(freeMarkerTemplateUtils.processTemplateIntoString(any(), any())).thenReturn("processedTemplate");
+        setupDescribeImagesResponse();
+        setupDescribeStackResourceResponse();
+        setupAutoscalingResponses();
+        setupDescribeInstanceStatusResponse();
+        setupCreateStackStatusCheckerTask();
+        setupCreateVolumeResponse();
+        setupDescribeVolumeResponse();
+
+        awsResourceConnector.launch(getAuthenticatedContext(), getStack(), persistenceNotifier, AdjustmentType.EXACT, Long.MAX_VALUE);
+
+        // assert
+        // resourceNotification calls: vpc, subnet
+        // aws calls
+        // computeResource calls
+        // - createVolume
+        // - attachVolume
+        // - describeVolume
+    }
+
+    void setupCreateVolumeResponse() {
+        when(amazonEC2Client.createVolume(any())).thenReturn(
+                new CreateVolumeResult().withVolume(
+                        new com.amazonaws.services.ec2.model.Volume().withVolumeId(VOLUME_ID + getNextVolumeId())
+                )
+        );
+    }
+
+    private static int getNextVolumeId(){
+        return s_volumeIndex++;
+    }
+
+    void setupDescribeVolumeResponse() {
+        when(amazonEC2Client.describeVolumes(any())).thenAnswer(
+                (Answer) invocation -> {
+                    DescribeVolumesResult describeVolumesResult = new DescribeVolumesResult();
+                    Object[] args = invocation.getArguments();
+                    DescribeVolumesRequest describeVolumesRequest = (DescribeVolumesRequest)args[0];
+                    VolumeState currentVolumeState = getCurrentVolumeState();
+                    describeVolumesRequest.getVolumeIds().forEach(
+                            volume -> describeVolumesResult.withVolumes(
+                                    new com.amazonaws.services.ec2.model.Volume().withState(currentVolumeState)
+                            )
+                    );
+                    return describeVolumesResult;
+                }
+        );
+    }
+
+    private VolumeState getCurrentVolumeState() {
+        VolumeState currentVolumeState = s_describeVolumeRequestFirstInvocation ? VolumeState.Available : VolumeState.InUse;
+        s_describeVolumeRequestFirstInvocation = false;
+        return currentVolumeState;
+    }
+
+    void setupDescribeInstanceStatusResponse() {
+        when(amazonEC2Client.describeInstanceStatus(any())).thenReturn(
+                new DescribeInstanceStatusResult().withInstanceStatuses(
+                        new com.amazonaws.services.ec2.model.InstanceStatus().withInstanceState(new InstanceState().withCode(INSTANCE_STATE_RUNNING)))
+        );
+    }
+
+    void setupDescribeStacksResponses() {
+        when(amazonCloudFormationRetryClient.describeStacks(any()))
+                .thenThrow(new AmazonServiceException("stack does not exist"))
+                .thenReturn(getDescribeStacksResult())
+                .thenReturn(getDescribeStacksResult())
+                .thenReturn(getDescribeStacksResult());
+    }
+
+    void setupDescribeImagesResponse() {
         DescribeImagesResult describeImagesResult =
                 new DescribeImagesResult()
                         .withImages(new com.amazonaws.services.ec2.model.Image().withRootDeviceName(""));
         when(amazonEC2Client.describeImages(any())).thenReturn(describeImagesResult);
-        DescribeImagesResult result = amazonEC2Client.describeImages(new DescribeImagesRequest());
+    }
+
+    void setupCreateStackStatusCheckerTask() {
+        // TODO would be nice to call real method instead of mocking it
         when(awsCreateStackStatusCheckerTask.completed(anyBoolean())).thenReturn(true);
         when(awsCreateStackStatusCheckerTask.call()).thenReturn(true);
+    }
 
-//        awsResourceConnector.launch(getAuthenticatedContext(), getStack(), persistenceNotifier, AdjustmentType.EXACT, Long.MAX_VALUE);
+    void setupDescribeStackResourceResponse() {
+        StackResourceDetail stackResourceDetail = new StackResourceDetail().withPhysicalResourceId(AUTOSCALING_GROUP_NAME);
+        DescribeStackResourceResult describeStackResourceResult = new DescribeStackResourceResult().withStackResourceDetail(stackResourceDetail);
+        when(amazonCloudFormationRetryClient.describeStackResource(any())).thenReturn(describeStackResourceResult);
+    }
+
+    void setupAutoscalingResponses() {
+        DescribeScalingActivitiesResult describeScalingActivitiesResult = new DescribeScalingActivitiesResult();
+        when(amazonAutoScalingRetryClient.describeScalingActivities(any())).thenReturn(describeScalingActivitiesResult);
+
+        DescribeAutoScalingGroupsResult describeAutoScalingGroupsResult = new DescribeAutoScalingGroupsResult()
+                .withAutoScalingGroups(
+                        new AutoScalingGroup()
+                                .withInstances(new Instance().withLifecycleState(LifecycleState.InService).withInstanceId(INSTANCE_ID))
+                                .withAutoScalingGroupName(AUTOSCALING_GROUP_NAME)
+                );
+        when(amazonAutoScalingRetryClient.describeAutoScalingGroups(any())).thenReturn(describeAutoScalingGroupsResult);
     }
 
     private AuthenticatedContext getAuthenticatedContext() {
@@ -146,10 +270,22 @@ public class AwsLauchTest extends AwsComponentTest {
     }
 
     private CloudInstance getCloudInstance(InstanceAuthentication instanceAuthentication) {
-        List<Volume> volumes = Arrays.asList(new Volume("/hadoop/fs1", "HDD", 1), new Volume("/hadoop/fs2", "HDD", 1));
+        List<Volume> volumes = Arrays.asList(
+                new Volume("/hadoop/fs1", "HDD", 1),
+                new Volume("/hadoop/fs2", "HDD", 1)
+        );
         InstanceTemplate instanceTemplate = new InstanceTemplate("m1.medium", "master", 0L, volumes, InstanceStatus.CREATE_REQUESTED,
                 new HashMap<>(), 0L, "cb-centos66-amb200-2015-05-25");
         Map<String, Object> params = new HashMap<>();
-        return new CloudInstance("SOME_ID", instanceTemplate, instanceAuthentication, params);
+        return new CloudInstance(null, instanceTemplate, instanceAuthentication, params);
+    }
+
+    private DescribeStacksResult getDescribeStacksResult() {
+        return new DescribeStacksResult().withStacks(
+                new Stack().withOutputs(
+                        new Output().withOutputKey("CreatedVpc").withOutputValue("vpc-id"),
+                        new Output().withOutputKey("CreatedSubnet").withOutputValue("subnet-id"),
+                        new Output().withOutputKey("EIPAllocationIDmaster1").withOutputValue("eipalloc-id")
+                ));
     }
 }

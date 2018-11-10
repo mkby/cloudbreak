@@ -1,5 +1,6 @@
 package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -40,11 +41,17 @@ public class AwsComputeResourceService {
     }
 
     public List<CloudResourceStatus> buildComputeResourcesForUpscale(AuthenticatedContext ac, CloudStack stack, List<Group> groupsWithNewInstances,
-            List<CloudResource> newInstances) {
+            List<CloudResource> newInstances, List<CloudResource> reattachableVolumeSets) {
         CloudContext cloudContext = ac.getCloudContext();
         ResourceBuilderContext context = contextBuilder.contextInit(cloudContext, ac, stack.getNetwork(), null, true);
 
-        awsContextService.addInstancesToContext(newInstances, context, groupsWithNewInstances);
+        if (reattachableVolumeSets.isEmpty()) {
+            awsContextService.addInstancesToContext(newInstances, context, groupsWithNewInstances);
+        } else {
+            List<CloudResource> contextResources = new ArrayList<>(newInstances);
+            contextResources.addAll(reattachableVolumeSets);
+            awsContextService.addResourcesToContext(contextResources, context, groupsWithNewInstances);
+        }
         return computeResourceService.buildResourcesForUpscale(context, ac, stack, groupsWithNewInstances);
     }
 

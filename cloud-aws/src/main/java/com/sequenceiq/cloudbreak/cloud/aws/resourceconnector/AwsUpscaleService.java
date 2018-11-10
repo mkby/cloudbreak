@@ -31,6 +31,7 @@ import com.sequenceiq.cloudbreak.cloud.model.CloudStack;
 import com.sequenceiq.cloudbreak.cloud.model.Group;
 import com.sequenceiq.cloudbreak.cloud.model.ResourceStatus;
 import com.sequenceiq.cloudbreak.cloud.transform.CloudResourceHelper;
+import com.sequenceiq.cloudbreak.common.type.ResourceType;
 
 @Service
 public class AwsUpscaleService {
@@ -86,7 +87,8 @@ public class AwsUpscaleService {
 
         List<Group> groupsWithNewInstances = getGroupsWithNewInstances(scaledGroups);
         List<CloudResource> newInstances = getNewInstances(scaledGroups, instances);
-        awsComputeResourceService.buildComputeResourcesForUpscale(ac, stack, groupsWithNewInstances, newInstances);
+        List<CloudResource> reattachableVolumeSets = getReattachableVolumeSets(scaledGroups, resources);
+        awsComputeResourceService.buildComputeResourcesForUpscale(ac, stack, groupsWithNewInstances, newInstances, reattachableVolumeSets);
 
         return singletonList(new CloudResourceStatus(cfStackUtil.getCloudFormationStackResource(resources), ResourceStatus.UPDATED));
     }
@@ -125,6 +127,13 @@ public class AwsUpscaleService {
             Group group = scaledGroups.stream().filter(scaledGroup -> scaledGroup.getName().equals(instance.getGroup())).findFirst().get();
             return group.getInstances().stream().noneMatch(inst -> instance.getInstanceId().equals(inst.getInstanceId()));
         }).collect(Collectors.toList());
+    }
+
+    private List<CloudResource> getReattachableVolumeSets(List<Group> scaledGroups, List<CloudResource> resources) {
+        return resources.stream()
+                .filter(cloudResource -> ResourceType.AWS_VOLUMESET.equals(cloudResource.getType()))
+                .filter(cloudResource -> Objects.isNull(cloudResource.getInstanceId()))
+                .collect(Collectors.toList());
     }
 
     private List<Group> getGroupsWithNewInstances(List<Group> scaledGroups) {

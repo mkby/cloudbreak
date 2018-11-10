@@ -5,8 +5,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -17,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.CreateVolumeRequest;
@@ -76,28 +79,40 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
     @Override
     public List<CloudResource> create(AwsContext context, long privateId, AuthenticatedContext auth, Group group, Image image) {
         LOGGER.info("Create volume resources");
-        AwsResourceNameService resourceNameService = getResourceNameService();
+        List<CloudResource> computeResources = context.getComputeResources(privateId);
+        Optional<CloudResource> reattachableVolumeSet = computeResources.stream()
+                .filter(resource -> ResourceType.AWS_VOLUMESET.equals(resource.getType()))
+                .findFirst();
 
-        CloudInstance instance = group.getReferenceInstanceConfiguration();
-        InstanceTemplate template = instance.getTemplate();
-        Volume volumeTemplate = template.getVolumes().iterator().next();
-        String groupName = group.getName();
-        CloudContext cloudContext = auth.getCloudContext();
-        String stackName = cloudContext.getName();
-        return List.of(new Builder()
-                .persistent(true)
-                .type(resourceType())
-                .name(resourceNameService.resourceName(resourceType(), stackName, groupName, privateId))
-                .group(group.getName())
-                .status(CommonStatus.CREATED)
-                .params(Map.of(CloudResource.ATTRIBUTES, new VolumeSetAttributes.Builder()
-                        .withVolumeSize(volumeTemplate.getSize())
-                        .withVolumeType(volumeTemplate.getType())
-                        .withAvailabilityZone(auth.getCloudContext().getLocation().getAvailabilityZone().value())
-                        .withVolumes(template.getVolumes().stream().map(vol -> new VolumeSetAttributes.Volume(null, vol.getMount(), null, null))
-                                .collect(Collectors.toList()))
-                        .build()))
-                .build());
+        return List.of(reattachableVolumeSet.orElseGet(createVolumeSet(privateId, auth, group)));
+    }
+
+    private Supplier<CloudResource> createVolumeSet(long privateId, AuthenticatedContext auth, Group group) {
+        return () -> {
+            AwsResourceNameService resourceNameService = getResourceNameService();
+
+            CloudInstance instance = group.getReferenceInstanceConfiguration();
+            InstanceTemplate template = instance.getTemplate();
+            Volume volumeTemplate = template.getVolumes().iterator().next();
+            String groupName = group.getName();
+            CloudContext cloudContext = auth.getCloudContext();
+            String stackName = cloudContext.getName();
+            return new Builder()
+                    .persistent(true)
+                    .type(resourceType())
+                    .name(resourceNameService.resourceName(resourceType(), stackName, groupName, privateId))
+                    .group(group.getName())
+                    .status(CommonStatus.REQUESTED)
+                    .params(Map.of(CloudResource.ATTRIBUTES, new VolumeSetAttributes.Builder()
+                            .withVolumeSize(volumeTemplate.getSize())
+                            .withVolumeType(volumeTemplate.getType())
+                            .withAvailabilityZone(auth.getCloudContext().getLocation().getAvailabilityZone().value())
+                            .withDeleteOnTermination(Boolean.TRUE)
+                            .withVolumes(template.getVolumes().stream().map(vol -> new VolumeSetAttributes.Volume(null, vol.getMount(), null, null))
+                                    .collect(Collectors.toList()))
+                            .build()))
+                    .build();
+        };
     }
 
     @Override
@@ -113,7 +128,11 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
         TagSpecification tagSpecification = new TagSpecification()
                 .withResourceType(com.amazonaws.services.ec2.model.ResourceType.Volume)
                 .withTags(awsTagPreparationService.prepareEc2Tags(auth, cloudStack.getTags()));
-        for (CloudResource resource : buildableResource) {
+
+        List<CloudResource> requestedResources = buildableResource.stream()
+                .filter(cloudResource -> CommonStatus.REQUESTED.equals(cloudResource.getStatus()))
+                .collect(Collectors.toList());
+        for (CloudResource resource : requestedResources) {
             volumeSetMap.put(resource.getName(), Collections.synchronizedList(new ArrayList<>()));
 
             VolumeSetAttributes volumeSet = resource.getParameter(CloudResource.ATTRIBUTES, VolumeSetAttributes.class);
@@ -131,10 +150,26 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
             future.get();
         }
 
-        buildableResource.forEach(resource ->
-                resource.getParameter(CloudResource.ATTRIBUTES, VolumeSetAttributes.class).setVolumes(volumeSetMap.get(resource.getName())));
+        return buildableResource.stream()
+                .peek(resource -> {
+                    List<VolumeSetAttributes.Volume> volumes = volumeSetMap.get(resource.getName());
+                    if (!CollectionUtils.isEmpty(volumes)) {
+                        resource.getParameter(CloudResource.ATTRIBUTES, VolumeSetAttributes.class).setVolumes(volumes);
+                    }
+                })
+                .map(copyResourceWithNewStatus(CommonStatus.CREATED))
+                .collect(Collectors.toList());
+    }
 
-        return buildableResource;
+    private Function<CloudResource, CloudResource> copyResourceWithNewStatus(CommonStatus status) {
+        return resource -> new Builder()
+                .persistent(true)
+                .group(resource.getGroup())
+                .type(resource.getType())
+                .status(status)
+                .name(resource.getName())
+                .params(resource.getParameters())
+                .build();
     }
 
     private Function<VolumeSetAttributes.Volume, CreateVolumeRequest> createVolumeRequest(String snapshotId, TagSpecification tagSpecification,
@@ -160,15 +195,22 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
     }
 
     @Override
-    public CloudResource delete(AwsContext context, AuthenticatedContext auth, CloudResource resource) {
+    public CloudResource delete(AwsContext context, AuthenticatedContext auth, CloudResource resource) throws InterruptedException {
         LOGGER.info("Set delete on termination to true, on instances");
         VolumeSetAttributes volumeSetAttributes = resource.getParameter(CloudResource.ATTRIBUTES, VolumeSetAttributes.class);
+        if (!volumeSetAttributes.getDeleteOnTermination()) {
+            resource.setInstanceId(null);
+            volumeSetAttributes.setDeleteOnTermination(Boolean.FALSE);
+            resourceNotifier.notifyUpdate(resource, auth.getCloudContext());
+            throw new InterruptedException("Resource will be preserved for later reattachment.");
+        }
+
         List<InstanceBlockDeviceMappingSpecification> deviceMappingSpecifications = volumeSetAttributes
                 .getVolumes().stream()
                 .map(volume -> {
                     EbsInstanceBlockDeviceSpecification device = new EbsInstanceBlockDeviceSpecification()
                             .withVolumeId(volume.getId())
-                            .withDeleteOnTermination(true);
+                            .withDeleteOnTermination(Boolean.TRUE);
 
                     return new InstanceBlockDeviceMappingSpecification()
                             .withEbs(device)
@@ -193,7 +235,6 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
 
     @Override
     protected List<CloudResourceStatus> checkResources(ResourceType type, AwsContext context, AuthenticatedContext auth, Iterable<CloudResource> resources) {
-
         AmazonEC2Client client = getAmazonEC2Client(auth);
         List<CloudResource> volumeResources = StreamSupport.stream(resources.spliterator(), false)
                 .filter(r -> r.getType().equals(resourceType()))

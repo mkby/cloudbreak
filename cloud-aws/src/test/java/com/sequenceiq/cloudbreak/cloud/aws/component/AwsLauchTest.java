@@ -11,11 +11,9 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +23,7 @@ import javax.inject.Inject;
 
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.MockBeans;
@@ -48,13 +47,14 @@ import com.amazonaws.services.ec2.model.DescribeVolumesRequest;
 import com.amazonaws.services.ec2.model.DescribeVolumesResult;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.VolumeState;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.sequenceiq.cloudbreak.api.model.AdjustmentType;
 import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
-import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.task.AwsCreateStackStatusCheckerTask;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
@@ -101,15 +101,22 @@ public class AwsLauchTest extends AwsComponentTest {
 
     private static final String INSTANCE_ID = "instanceId";
 
-    private static final String VOLUME_ID = "New Volume Id";
+    private static final String VOLUME_ID = "VolumeId";
 
-    private static final int SIZE_DISK_1 = 1;
+    private static final String VOLUME_ID_1 = "VolumeId_1";
 
-    private static final int SIZE_DISK_2 = 2;
+    private static final String VOLUME_ID_2 = "VolumeId_2";
 
-    private static int volumeIndex = 1;
+    private static final int VOLUME_SIZE = 10;
 
-    private static boolean describeVolumeRequestFirstInvocation = true;
+    private static final List<Volume> VOLUMES_TO_CREATE = ImmutableList.of(
+            new Volume("/hadoop/fs1", "HDD", VOLUME_SIZE),
+            new Volume("/hadoop/fs1", "HDD", VOLUME_SIZE)
+    );
+
+    private boolean describeVolumeRequestFirstInvocation = true;
+
+    private int invocationCount;
 
     @Inject
     private AwsResourceConnector awsResourceConnector;
@@ -152,43 +159,54 @@ public class AwsLauchTest extends AwsComponentTest {
 
         awsResourceConnector.launch(getAuthenticatedContext(), getStack(), persistenceNotifier, AdjustmentType.EXACT, Long.MAX_VALUE);
 
-        // assert
-        verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_VPC.equals(cloudResource.getType())), any());
-        verify(persistenceNotifier, times(2)).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_VOLUMESET.equals(cloudResource.getType())), any());
-        verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_SUBNET.equals(cloudResource.getType())), any());
-        verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.CLOUDFORMATION_STACK.equals(cloudResource.getType())), any());
-        // resourceNotification calls: vpc, subnet
+        InOrder inOrderClient = inOrder(amazonEC2Client, amazonCloudFormationRetryClient, awsCreateStackStatusCheckerTask, persistenceNotifier);
+        inOrderClient.verify(amazonCloudFormationRetryClient).describeStacks(any());
+        inOrderClient.verify(persistenceNotifier).notifyAllocation(
+                argThat(cloudResource -> ResourceType.CLOUDFORMATION_STACK.equals(cloudResource.getType())), any());
+        inOrderClient.verify(amazonEC2Client).describeImages(any());
+        inOrderClient.verify(amazonCloudFormationRetryClient).createStack(any());
+        inOrderClient.verify(awsCreateStackStatusCheckerTask).call();
+        inOrderClient.verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_VPC.equals(cloudResource.getType())), any());
+        inOrderClient.verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_SUBNET.equals(cloudResource.getType())), any());
 
-        InOrder inOrder = inOrder(amazonEC2Client, amazonCloudFormationRetryClient, awsCreateStackStatusCheckerTask);
-        inOrder.verify(amazonEC2Client).describeImages(any());
-        inOrder.verify(amazonCloudFormationRetryClient).createStack(any());
-        inOrder.verify(awsCreateStackStatusCheckerTask).call();
-        inOrder.verify(amazonEC2Client, times(2)).createVolume(any());
-        inOrder.verify(amazonEC2Client, times(2)).attachVolume(any());
-        // aws calls
-        // computeResource calls
-        // - createVolume
-        // - attachVolume
-        // - describeVolume
+        inOrderClient.verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_VOLUMESET.equals(cloudResource.getType())), any());
+        inOrderClient.verify(amazonEC2Client, times(VOLUMES_TO_CREATE.size())).createVolume(argThat(cv -> cv.getSize() == VOLUME_SIZE));
+        inOrderClient.verify(persistenceNotifier).notifyUpdate(argThat(cloudResource -> ResourceType.AWS_VOLUMESET.equals(cloudResource.getType())), any());
+        inOrderClient.verify(amazonEC2Client).describeVolumes(argThat(dv -> containsInOrder(dv, VOLUME_ID_1, VOLUME_ID_2)));
+
+        inOrderClient.verify(amazonEC2Client).attachVolume(argThat(x -> x.getVolumeId().equals(VOLUME_ID_1)));
+        inOrderClient.verify(amazonEC2Client).attachVolume(argThat(x -> x.getVolumeId().equals(VOLUME_ID_2)));
+        inOrderClient.verify(persistenceNotifier).notifyUpdate(argThat(cloudResource -> ResourceType.AWS_VOLUMESET.equals(cloudResource.getType())), any());
+        inOrderClient.verify(amazonEC2Client).describeVolumes(argThat(dv -> containsInOrder(dv, VOLUME_ID_1, VOLUME_ID_2)));
     }
 
-    void setupFreemarkerTemplateProcessing() throws IOException, freemarker.template.TemplateException {
+    private boolean containsInOrder(DescribeVolumesRequest dv, String value1, String value2) {
+        return dv.getVolumeIds().get(0).equals(value1) && dv.getVolumeIds().get(1).equals(value2);
+    }
+
+    private void setupFreemarkerTemplateProcessing() throws IOException, freemarker.template.TemplateException {
         when(freeMarkerTemplateUtils.processTemplateIntoString(any(), any())).thenReturn("processedTemplate");
     }
 
-    void setupCreateVolumeResponse() {
-        when(amazonEC2Client.createVolume(any())).thenReturn(
-                new CreateVolumeResult().withVolume(
-                        new com.amazonaws.services.ec2.model.Volume().withVolumeId(VOLUME_ID + getNextVolumeId())
-                )
+    private void setupCreateVolumeResponse() {
+        when(amazonEC2Client.createVolume(any())).thenAnswer(
+                new Answer<CreateVolumeResult>() {
+                    public CreateVolumeResult answer(InvocationOnMock invocation) {
+                        ++invocationCount;
+                        return new CreateVolumeResult().withVolume(
+                                new com.amazonaws.services.ec2.model.Volume().withVolumeId(VOLUME_ID + "_" + invocationCount)
+                        );
+                    }
+                }
         );
+//        when(amazonEC2Client.createVolume(any())).thenReturn(
+//                new CreateVolumeResult().withVolume(
+//                        new com.amazonaws.services.ec2.model.Volume().withVolumeId(VOLUME_ID)
+//                )
+//        );
     }
 
-    private static int getNextVolumeId() {
-        return volumeIndex++;
-    }
-
-    void setupDescribeVolumeResponse() {
+    private void setupDescribeVolumeResponse() {
         when(amazonEC2Client.describeVolumes(any())).thenAnswer(
                 (Answer) invocation -> {
                     DescribeVolumesResult describeVolumesResult = new DescribeVolumesResult();
@@ -211,14 +229,14 @@ public class AwsLauchTest extends AwsComponentTest {
         return currentVolumeState;
     }
 
-    void setupDescribeInstanceStatusResponse() {
+    private void setupDescribeInstanceStatusResponse() {
         when(amazonEC2Client.describeInstanceStatus(any())).thenReturn(
                 new DescribeInstanceStatusResult().withInstanceStatuses(
                         new com.amazonaws.services.ec2.model.InstanceStatus().withInstanceState(new InstanceState().withCode(INSTANCE_STATE_RUNNING)))
         );
     }
 
-    void setupDescribeStacksResponses() {
+    private void setupDescribeStacksResponses() {
         when(amazonCloudFormationRetryClient.describeStacks(any()))
                 .thenThrow(new AmazonServiceException("stack does not exist"))
                 .thenReturn(getDescribeStacksResult())
@@ -226,26 +244,25 @@ public class AwsLauchTest extends AwsComponentTest {
                 .thenReturn(getDescribeStacksResult());
     }
 
-    void setupDescribeImagesResponse() {
+    private void setupDescribeImagesResponse() {
         when(amazonEC2Client.describeImages(any())).thenReturn(
                 new DescribeImagesResult()
                         .withImages(new com.amazonaws.services.ec2.model.Image().withRootDeviceName(""))
         );
     }
 
-    void setupCreateStackStatusCheckerTask() {
-        // TODO would be nice to call real method instead of mocking it
+    private void setupCreateStackStatusCheckerTask() {
         when(awsCreateStackStatusCheckerTask.completed(anyBoolean())).thenReturn(true);
         when(awsCreateStackStatusCheckerTask.call()).thenReturn(true);
     }
 
-    void setupDescribeStackResourceResponse() {
+    private void setupDescribeStackResourceResponse() {
         StackResourceDetail stackResourceDetail = new StackResourceDetail().withPhysicalResourceId(AUTOSCALING_GROUP_NAME);
         DescribeStackResourceResult describeStackResourceResult = new DescribeStackResourceResult().withStackResourceDetail(stackResourceDetail);
         when(amazonCloudFormationRetryClient.describeStackResource(any())).thenReturn(describeStackResourceResult);
     }
 
-    void setupAutoscalingResponses() {
+    private void setupAutoscalingResponses() {
         DescribeScalingActivitiesResult describeScalingActivitiesResult = new DescribeScalingActivitiesResult();
         when(amazonAutoScalingRetryClient.describeScalingActivities(any())).thenReturn(describeScalingActivitiesResult);
 
@@ -292,14 +309,18 @@ public class AwsLauchTest extends AwsComponentTest {
     }
 
     private CloudInstance getCloudInstance(InstanceAuthentication instanceAuthentication) {
-        List<Volume> volumes = Arrays.asList(
-                new Volume("/hadoop/fs1", "HDD", SIZE_DISK_1),
-                new Volume("/hadoop/fs2", "HDD", SIZE_DISK_2)
-        );
+        List<Volume> volumes = getVolumes();
         InstanceTemplate instanceTemplate = new InstanceTemplate("m1.medium", "master", 0L, volumes, InstanceStatus.CREATE_REQUESTED,
                 new HashMap<>(), 0L, "cb-centos66-amb200-2015-05-25");
         Map<String, Object> params = new HashMap<>();
         return new CloudInstance(null, instanceTemplate, instanceAuthentication, params);
+    }
+
+    private List<Volume> getVolumes() {
+        return List.of(
+                new Volume("/hadoop/fs1", "HDD", VOLUME_SIZE),
+                new Volume("/hadoop/fs1", "HDD", VOLUME_SIZE)
+        );
     }
 
     private DescribeStacksResult getDescribeStacksResult() {

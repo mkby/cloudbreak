@@ -1,4 +1,4 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -22,6 +22,10 @@ import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsComputeResourceService;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsElasticIpService;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsTerminateService;
 import com.sequenceiq.cloudbreak.cloud.aws.context.AwsContextBuilder;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedSnapshotService;

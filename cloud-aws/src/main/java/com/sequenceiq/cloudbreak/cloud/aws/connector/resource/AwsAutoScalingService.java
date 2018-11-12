@@ -1,6 +1,6 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
-import static com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConstants.SUSPENDED_PROCESSES;
+import static com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConstants.SUSPENDED_PROCESSES;
 
 import java.util.Collection;
 import java.util.List;

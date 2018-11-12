@@ -1,4 +1,4 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
 import static com.sequenceiq.cloudbreak.cloud.aws.AwsInstanceConnector.INSTANCE_NOT_FOUND_ERROR_CODE;
 

@@ -54,7 +54,7 @@ import com.sequenceiq.cloudbreak.api.model.stack.instance.InstanceGroupType;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.encryption.EncryptedImageCopyService;
-import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.aws.task.AwsCreateStackStatusCheckerTask;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;

@@ -1,8 +1,8 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
 import static com.amazonaws.services.cloudformation.model.StackStatus.DELETE_COMPLETE;
 import static com.amazonaws.services.cloudformation.model.StackStatus.DELETE_FAILED;
-import static com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConstants.ERROR_STATUSES;
+import static com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConstants.ERROR_STATUSES;
 
 import java.util.Collections;
 import java.util.List;

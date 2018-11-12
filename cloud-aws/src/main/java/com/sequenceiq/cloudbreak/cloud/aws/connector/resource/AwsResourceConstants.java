@@ -1,4 +1,4 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
 import static com.amazonaws.services.cloudformation.model.StackStatus.CREATE_FAILED;
 import static com.amazonaws.services.cloudformation.model.StackStatus.DELETE_FAILED;

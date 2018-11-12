@@ -35,7 +35,7 @@ import com.sequenceiq.cloudbreak.cloud.aws.AwsTagValidator;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.component.AwsComponentTest.AwsTestContext;
-import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
 import com.sequenceiq.cloudbreak.cloud.notification.ResourceNotifier;
 import com.sequenceiq.cloudbreak.cloud.reactor.config.CloudReactorConfiguration;

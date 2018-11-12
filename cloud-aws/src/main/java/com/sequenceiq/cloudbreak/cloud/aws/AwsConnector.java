@@ -18,7 +18,7 @@ import com.sequenceiq.cloudbreak.cloud.PlatformResources;
 import com.sequenceiq.cloudbreak.cloud.ResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.Setup;
 import com.sequenceiq.cloudbreak.cloud.Validator;
-import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.model.Platform;
 import com.sequenceiq.cloudbreak.cloud.model.Variant;
 

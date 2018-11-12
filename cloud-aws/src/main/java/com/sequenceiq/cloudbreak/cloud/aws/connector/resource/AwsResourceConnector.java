@@ -1,4 +1,4 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;

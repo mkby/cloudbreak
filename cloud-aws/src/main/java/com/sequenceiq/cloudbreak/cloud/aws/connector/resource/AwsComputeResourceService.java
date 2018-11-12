@@ -1,4 +1,4 @@
-package com.sequenceiq.cloudbreak.cloud.aws.resourceconnector;
+package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 
 import java.util.ArrayList;
 import java.util.List;

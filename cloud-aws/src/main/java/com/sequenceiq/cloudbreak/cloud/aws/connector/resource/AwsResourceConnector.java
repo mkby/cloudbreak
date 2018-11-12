@@ -93,7 +93,6 @@ public class AwsResourceConnector implements ResourceConnector<Object> {
         return StringUtils.isNoneEmpty(cloudbreakVpc) && existingVPC && awsNetworkView.getExistingVPC().equals(cloudbreakVpc);
     }
 
-
     @Override
     public List<CloudResourceStatus> check(AuthenticatedContext authenticatedContext, List<CloudResource> resources) {
         return new ArrayList<>();

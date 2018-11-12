@@ -73,7 +73,7 @@ public class AwsAutoScalingService {
         }
     }
 
-    public void updateAutoscalingGroup(AmazonAutoScalingRetryClient amazonASClient, String groupName, Group group, Long cloudContextId){
+    public void updateAutoscalingGroup(AmazonAutoScalingRetryClient amazonASClient, String groupName, Group group, Long cloudContextId) {
         amazonASClient.updateAutoScalingGroup(new UpdateAutoScalingGroupRequest()
                 .withAutoScalingGroupName(groupName)
                 .withMaxSize(group.getInstancesSize())

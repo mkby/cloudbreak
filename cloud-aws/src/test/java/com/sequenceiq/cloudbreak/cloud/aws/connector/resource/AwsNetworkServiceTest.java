@@ -32,7 +32,6 @@ import com.sequenceiq.cloudbreak.cloud.aws.AwsClient;
 import com.sequenceiq.cloudbreak.cloud.aws.AwsTagPreparationService;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationStackUtil;
 import com.sequenceiq.cloudbreak.cloud.aws.CloudFormationTemplateBuilder;
-import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsNetworkService;
 import com.sequenceiq.cloudbreak.cloud.aws.task.AwsPollTaskFactory;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;

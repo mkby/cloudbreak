@@ -8,12 +8,12 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class  FutureTestImpl<T> implements Future<T> {
+public class FutureTestImpl<T> implements Future<T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(FutureTestImpl.class);
 
     private T result;
 
-    public FutureTestImpl(T result){
+    public FutureTestImpl(T result) {
         this.result = result;
     }
 

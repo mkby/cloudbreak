@@ -1,6 +1,5 @@
 package com.sequenceiq.cloudbreak.cloud.aws.component;
 
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -11,9 +10,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import javax.inject.Inject;
-
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.Answer;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,7 +31,6 @@ import com.sequenceiq.cloudbreak.cloud.aws.AwsTagValidator;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.component.AwsComponentTest.AwsTestContext;
-import com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConnector;
 import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
 import com.sequenceiq.cloudbreak.cloud.notification.ResourceNotifier;
 import com.sequenceiq.cloudbreak.cloud.reactor.config.CloudReactorConfiguration;
@@ -51,19 +46,7 @@ import freemarker.template.TemplateException;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = AwsTestContext.class)
-public class AwsComponentTest {
-
-    @Inject
-    private AwsResourceConnector awsResourceConnector;
-
-    @Inject
-    private AwsClient awsClient;
-
-    @Test
-    public void checkTestContext() {
-        assertNotNull(awsResourceConnector);
-        System.out.println(awsClient);
-    }
+public abstract class AwsComponentTest {
 
     @Configuration
     @ComponentScans(value = {
@@ -73,9 +56,9 @@ public class AwsComponentTest {
                             CloudReactorConfiguration.class
                     })),
     })
-    public static class AwsTestContext{
+    public static class AwsTestContext {
 
-        @MockBean(name="DefaultRetryService")
+        @MockBean(name = "DefaultRetryService")
         private Retry defaultRetryService;
 
         @MockBean
@@ -112,8 +95,8 @@ public class AwsComponentTest {
         private AmazonAutoScalingRetryClient amazonAutoScalingRetryClient;
 
         @Bean
-        public AwsClient awsClient(){
-            AwsClient awsClient= mock(AwsClient.class);
+        public AwsClient awsClient() {
+            AwsClient awsClient = mock(AwsClient.class);
             when(awsClient.createAccess(any(), anyString())).thenReturn(amazonEC2Client);
             when(awsClient.createAccess(any())).thenReturn(amazonEC2Client);
             when(awsClient.createCloudFormationRetryClient(any(), anyString())).thenReturn(amazonCloudFormationRetryClient);
@@ -154,7 +137,7 @@ public class AwsComponentTest {
         }
 
         @Bean
-        public CloudResourceHelper cloudResourceHelper(){
+        public CloudResourceHelper cloudResourceHelper() {
             return new CloudResourceHelper();
         }
 
@@ -166,13 +149,13 @@ public class AwsComponentTest {
             );
             return awsBackoffSyncPollingScheduler;
         }
-    }
 
-    static Answer getAnswer() {
-        return (Answer) invocation -> {
-            Object[] args = invocation.getArguments();
-            Callable task = (Callable)args[0];
-            return task.call();
-        };
+        static Answer getAnswer() {
+            return (Answer) invocation -> {
+                Object[] args = invocation.getArguments();
+                Callable task = (Callable) args[0];
+                return task.call();
+            };
+        }
     }
 }

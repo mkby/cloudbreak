@@ -47,7 +47,6 @@ public class AwsNetworkService {
     @Inject
     private AwsClient awsClient;
 
-
     public List<Group> getGatewayGroups(Collection<Group> groups) {
         return groups.stream().filter(group -> group.getType() == InstanceGroupType.GATEWAY).collect(Collectors.toList());
     }
@@ -98,6 +97,7 @@ public class AwsNetworkService {
 
         return calculateSubnet(ac.getCloudContext().getName(), vpc, subnetCidrs);
     }
+
     private String calculateSubnet(String stackName, Vpc vpc, Iterable<String> subnetCidrs) {
         SubnetUtils.SubnetInfo vpcInfo = new SubnetUtils(vpc.getCidrBlock()).getInfo();
         String[] cidrParts = vpcInfo.getCidrSignature().split("/");

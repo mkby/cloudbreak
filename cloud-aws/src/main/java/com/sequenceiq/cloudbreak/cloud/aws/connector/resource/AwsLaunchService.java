@@ -3,10 +3,7 @@ package com.sequenceiq.cloudbreak.cloud.aws.connector.resource;
 import static com.amazonaws.services.cloudformation.model.Capability.CAPABILITY_IAM;
 import static com.amazonaws.services.cloudformation.model.StackStatus.CREATE_COMPLETE;
 import static com.amazonaws.services.cloudformation.model.StackStatus.CREATE_FAILED;
-import static com.amazonaws.services.cloudformation.model.StackStatus.DELETE_FAILED;
-import static com.amazonaws.services.cloudformation.model.StackStatus.ROLLBACK_COMPLETE;
-import static com.amazonaws.services.cloudformation.model.StackStatus.ROLLBACK_FAILED;
-import static com.amazonaws.services.cloudformation.model.StackStatus.ROLLBACK_IN_PROGRESS;
+import static com.sequenceiq.cloudbreak.cloud.aws.connector.resource.AwsResourceConstants.ERROR_STATUSES;
 import static java.util.Arrays.asList;
 
 import java.util.ArrayList;
@@ -29,7 +26,6 @@ import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackStatus;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.DescribeImagesRequest;
 import com.amazonaws.services.ec2.model.DescribeImagesResult;
@@ -69,8 +65,6 @@ public class AwsLaunchService {
     private static final String CREATED_VPC = "CreatedVpc";
 
     private static final String CREATED_SUBNET = "CreatedSubnet";
-
-    private static final List<StackStatus> ERROR_STATUSES = asList(CREATE_FAILED, ROLLBACK_IN_PROGRESS, ROLLBACK_FAILED, ROLLBACK_COMPLETE, DELETE_FAILED);
 
     @Inject
     private CloudFormationStackUtil cfStackUtil;
@@ -183,7 +177,8 @@ public class AwsLaunchService {
         setElasticIps(cFStackName, cfRetryClient, amazonEC2Client, gateways, gatewayGroupInstanceMapping);
     }
 
-    private void setElasticIps(String cFStackName, AmazonCloudFormationRetryClient cfRetryClient, AmazonEC2Client amazonEC2Client, List<Group> gateways, Map<String, List<String>> gatewayGroupInstanceMapping) {
+    private void setElasticIps(String cFStackName, AmazonCloudFormationRetryClient cfRetryClient, AmazonEC2Client amazonEC2Client,
+            List<Group> gateways, Map<String, List<String>> gatewayGroupInstanceMapping) {
         Map<String, String> eipAllocationIds = awsElasticIpService.getElasticIpAllocationIds(cfStackUtil.getOutputs(cFStackName, cfRetryClient), cFStackName);
         for (Group gateway : gateways) {
             List<String> eips = awsElasticIpService.getEipsForGatewayGroup(eipAllocationIds, gateway);

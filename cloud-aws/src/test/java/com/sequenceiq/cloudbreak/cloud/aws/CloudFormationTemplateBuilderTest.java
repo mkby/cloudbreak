@@ -77,7 +77,6 @@ public class CloudFormationTemplateBuilderTest {
     @Mock
     private FreeMarkerTemplateUtils freeMarkerTemplateUtils;
 
-
     @InjectMocks
     private final CloudFormationTemplateBuilder cloudFormationTemplateBuilder = new CloudFormationTemplateBuilder();
 

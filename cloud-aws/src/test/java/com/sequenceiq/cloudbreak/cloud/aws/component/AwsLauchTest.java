@@ -107,9 +107,9 @@ public class AwsLauchTest extends AwsComponentTest {
 
     private static final int SIZE_DISK_2 = 2;
 
-    private static int s_volumeIndex = 1;
+    private static int volumeIndex = 1;
 
-    private static boolean s_describeVolumeRequestFirstInvocation = true;
+    private static boolean describeVolumeRequestFirstInvocation = true;
 
     @Inject
     private AwsResourceConnector awsResourceConnector;
@@ -185,7 +185,7 @@ public class AwsLauchTest extends AwsComponentTest {
     }
 
     private static int getNextVolumeId() {
-        return s_volumeIndex++;
+        return volumeIndex++;
     }
 
     void setupDescribeVolumeResponse() {
@@ -206,8 +206,8 @@ public class AwsLauchTest extends AwsComponentTest {
     }
 
     private VolumeState getCurrentVolumeState() {
-        VolumeState currentVolumeState = s_describeVolumeRequestFirstInvocation ? VolumeState.Available : VolumeState.InUse;
-        s_describeVolumeRequestFirstInvocation = false;
+        VolumeState currentVolumeState = describeVolumeRequestFirstInvocation ? VolumeState.Available : VolumeState.InUse;
+        describeVolumeRequestFirstInvocation = false;
         return currentVolumeState;
     }
 
@@ -273,9 +273,6 @@ public class AwsLauchTest extends AwsComponentTest {
 
         List<Group> groups = List.of(new Group("group1", InstanceGroupType.CORE, List.of(instance), security, null,
                 instanceAuthentication, instanceAuthentication.getLoginUserName(), instanceAuthentication.getPublicKey(), ROOT_VOLUME_SIZE));
-        Map<String, Object> networkParameters = new HashMap<>();
-        networkParameters.put("vpcId", "vpc-12345678");
-        networkParameters.put("internetGatewayId", "igw-12345678");
         Network network = new Network(new Subnet(CIDR));
 
         Map<InstanceGroupType, String> userData = ImmutableMap.of(

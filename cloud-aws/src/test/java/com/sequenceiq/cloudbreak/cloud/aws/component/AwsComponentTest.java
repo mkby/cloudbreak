@@ -7,11 +7,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import javax.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.stubbing.Answer;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +24,6 @@ import org.springframework.context.annotation.ComponentScans;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.ui.freemarker.FreeMarkerConfigurationFactoryBean;
 
@@ -33,6 +36,7 @@ import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonAutoScalingRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.client.AmazonCloudFormationRetryClient;
 import com.sequenceiq.cloudbreak.cloud.aws.component.AwsComponentTest.AwsTestContext;
 import com.sequenceiq.cloudbreak.cloud.aws.resourceconnector.AwsResourceConnector;
+import com.sequenceiq.cloudbreak.cloud.aws.scheduler.AwsBackoffSyncPollingScheduler;
 import com.sequenceiq.cloudbreak.cloud.notification.ResourceNotifier;
 import com.sequenceiq.cloudbreak.cloud.reactor.config.CloudReactorConfiguration;
 import com.sequenceiq.cloudbreak.cloud.scheduler.SyncPollingScheduler;
@@ -40,7 +44,6 @@ import com.sequenceiq.cloudbreak.cloud.template.GroupResourceBuilder;
 import com.sequenceiq.cloudbreak.cloud.template.NetworkResourceBuilder;
 import com.sequenceiq.cloudbreak.cloud.transform.CloudResourceHelper;
 import com.sequenceiq.cloudbreak.common.service.DefaultCostTaggingService;
-import com.sequenceiq.cloudbreak.concurrent.MDCCleanerTaskDecorator;
 import com.sequenceiq.cloudbreak.service.Retry;
 import com.sequenceiq.cloudbreak.util.FreeMarkerTemplateUtils;
 
@@ -69,16 +72,8 @@ public class AwsComponentTest {
                     includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = {
                             CloudReactorConfiguration.class
                     })),
-            @ComponentScan(basePackages = "com.sequenceiq.cloudbreak.cloud.scheduler", useDefaultFilters = false,
-                    includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = {
-                            SyncPollingScheduler.class
-                    }))
     })
     public static class AwsTestContext{
-
-        private static final int INTERMEDIATE_CORE_POOL_SIZE = 5;
-
-        private static final int INTERMEDIATE_QUEUE_CAPACITY = 20;
 
         @MockBean(name="DefaultRetryService")
         private Retry defaultRetryService;
@@ -140,24 +135,22 @@ public class AwsComponentTest {
 
         @Bean
         public AsyncTaskExecutor resourceBuilderExecutor() {
-            ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-            executor.setCorePoolSize(INTERMEDIATE_CORE_POOL_SIZE);
-            executor.setQueueCapacity(INTERMEDIATE_QUEUE_CAPACITY);
-            executor.setThreadNamePrefix("intermediateBuilderExecutor-");
-            executor.setTaskDecorator(new MDCCleanerTaskDecorator());
-            executor.initialize();
-            return executor;
+            return new AsyncTaskExecutorTestImpl();
         }
 
         @Bean
         public AsyncTaskExecutor intermediateBuilderExecutor() {
-            ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-            executor.setCorePoolSize(INTERMEDIATE_CORE_POOL_SIZE);
-            executor.setQueueCapacity(INTERMEDIATE_QUEUE_CAPACITY);
-            executor.setThreadNamePrefix("intermediateBuilderExecutor-");
-            executor.setTaskDecorator(new MDCCleanerTaskDecorator());
-            executor.initialize();
-            return executor;
+            return new AsyncTaskExecutorTestImpl();
+        }
+
+        @Bean
+        public SyncPollingScheduler syncPollingScheduler() throws InterruptedException, ExecutionException, TimeoutException {
+            SyncPollingScheduler syncPollingScheduler = mock(SyncPollingScheduler.class);
+            when(syncPollingScheduler.schedule(any())).thenAnswer(
+                    getAnswer()
+            );
+
+            return syncPollingScheduler;
         }
 
         @Bean
@@ -165,5 +158,21 @@ public class AwsComponentTest {
             return new CloudResourceHelper();
         }
 
+        @Bean
+        public AwsBackoffSyncPollingScheduler awsBackoffSyncPollingScheduler() throws InterruptedException, ExecutionException, TimeoutException {
+            AwsBackoffSyncPollingScheduler awsBackoffSyncPollingScheduler = mock(AwsBackoffSyncPollingScheduler.class);
+            when(awsBackoffSyncPollingScheduler.schedule(any())).thenAnswer(
+                    getAnswer()
+            );
+            return awsBackoffSyncPollingScheduler;
+        }
+    }
+
+    static Answer getAnswer() {
+        return (Answer) invocation -> {
+            Object[] args = invocation.getArguments();
+            Callable task = (Callable)args[0];
+            return task.call();
+        };
     }
 }

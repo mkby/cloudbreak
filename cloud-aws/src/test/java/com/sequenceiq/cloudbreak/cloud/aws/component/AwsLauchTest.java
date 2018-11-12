@@ -8,6 +8,9 @@ import static com.sequenceiq.cloudbreak.common.type.CloudConstants.AWS;
 import static java.util.Collections.emptyList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -69,6 +72,7 @@ import com.sequenceiq.cloudbreak.cloud.model.SecurityRule;
 import com.sequenceiq.cloudbreak.cloud.model.Subnet;
 import com.sequenceiq.cloudbreak.cloud.model.Volume;
 import com.sequenceiq.cloudbreak.cloud.notification.PersistenceNotifier;
+import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.util.FreeMarkerTemplateUtils;
 
 @MockBeans({
@@ -96,6 +100,10 @@ public class AwsLauchTest extends AwsComponentTest {
     private static final String INSTANCE_ID = "instanceId";
 
     private static final String VOLUME_ID = "New Volume Id";
+
+    private static final int SIZE_DISK_1 = 1;
+
+    private static final int SIZE_DISK_2 = 2;
 
     private static int s_volumeIndex = 1;
 
@@ -130,25 +138,37 @@ public class AwsLauchTest extends AwsComponentTest {
 
     @Test
     public void launchStack() throws Exception {
+        setupFreemarkerTemplateProcessing();
         setupDescribeStacksResponses();
-        when(freeMarkerTemplateUtils.processTemplateIntoString(any(), any())).thenReturn("processedTemplate");
         setupDescribeImagesResponse();
         setupDescribeStackResourceResponse();
         setupAutoscalingResponses();
         setupDescribeInstanceStatusResponse();
-        setupCreateStackStatusCheckerTask();
         setupCreateVolumeResponse();
         setupDescribeVolumeResponse();
+        setupCreateStackStatusCheckerTask();
 
         awsResourceConnector.launch(getAuthenticatedContext(), getStack(), persistenceNotifier, AdjustmentType.EXACT, Long.MAX_VALUE);
 
         // assert
+        verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_VPC.equals(cloudResource.getType())), any());
+        verify(persistenceNotifier, times(2)).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_VOLUMESET.equals(cloudResource.getType())), any());
+        verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.AWS_SUBNET.equals(cloudResource.getType())), any());
+        verify(persistenceNotifier).notifyAllocation(argThat(cloudResource -> ResourceType.CLOUDFORMATION_STACK.equals(cloudResource.getType())), any());
         // resourceNotification calls: vpc, subnet
+
+//        verify(amazonEC2Client).createVolume(argThat(cvr -> cvr.getSize() == SIZE_DISK_1));
+//        verify(amazonEC2Client).createVolume(argThat(cvr -> cvr.getSize() == SIZE_DISK_2));
+//        verify(amazonEC2Client).attachVolume(argThat(avr -> avr.getVolumeId().equals()));
         // aws calls
         // computeResource calls
         // - createVolume
         // - attachVolume
         // - describeVolume
+    }
+
+    void setupFreemarkerTemplateProcessing() throws IOException, freemarker.template.TemplateException {
+        when(freeMarkerTemplateUtils.processTemplateIntoString(any(), any())).thenReturn("processedTemplate");
     }
 
     void setupCreateVolumeResponse() {
@@ -271,8 +291,8 @@ public class AwsLauchTest extends AwsComponentTest {
 
     private CloudInstance getCloudInstance(InstanceAuthentication instanceAuthentication) {
         List<Volume> volumes = Arrays.asList(
-                new Volume("/hadoop/fs1", "HDD", 1),
-                new Volume("/hadoop/fs2", "HDD", 1)
+                new Volume("/hadoop/fs1", "HDD", SIZE_DISK_1),
+                new Volume("/hadoop/fs2", "HDD", SIZE_DISK_2)
         );
         InstanceTemplate instanceTemplate = new InstanceTemplate("m1.medium", "master", 0L, volumes, InstanceStatus.CREATE_REQUESTED,
                 new HashMap<>(), 0L, "cb-centos66-amb200-2015-05-25");

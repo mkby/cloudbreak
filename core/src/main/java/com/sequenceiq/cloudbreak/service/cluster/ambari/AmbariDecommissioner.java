@@ -15,6 +15,7 @@ import static com.sequenceiq.cloudbreak.service.cluster.flow.AmbariOperationServ
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -42,8 +44,10 @@ import com.google.common.collect.Sets;
 import com.sequenceiq.ambari.client.AmbariClient;
 import com.sequenceiq.ambari.client.services.ServiceAndHostService;
 import com.sequenceiq.cloudbreak.client.HttpClientConfig;
+import com.sequenceiq.cloudbreak.cloud.model.VolumeSetAttributes;
 import com.sequenceiq.cloudbreak.common.model.OrchestratorType;
 import com.sequenceiq.cloudbreak.common.type.HostMetadataState;
+import com.sequenceiq.cloudbreak.common.type.ResourceType;
 import com.sequenceiq.cloudbreak.controller.exception.BadRequestException;
 import com.sequenceiq.cloudbreak.core.bootstrap.service.OrchestratorTypeResolver;
 import com.sequenceiq.cloudbreak.core.bootstrap.service.container.ContainerOrchestratorResolver;
@@ -52,6 +56,7 @@ import com.sequenceiq.cloudbreak.core.flow2.stack.FlowMessageService;
 import com.sequenceiq.cloudbreak.core.flow2.stack.Msg;
 import com.sequenceiq.cloudbreak.domain.Container;
 import com.sequenceiq.cloudbreak.domain.Orchestrator;
+import com.sequenceiq.cloudbreak.domain.Resource;
 import com.sequenceiq.cloudbreak.domain.stack.Stack;
 import com.sequenceiq.cloudbreak.domain.stack.cluster.Cluster;
 import com.sequenceiq.cloudbreak.domain.stack.cluster.host.HostGroup;
@@ -72,7 +77,6 @@ import com.sequenceiq.cloudbreak.service.PollingResult;
 import com.sequenceiq.cloudbreak.service.PollingService;
 import com.sequenceiq.cloudbreak.service.TlsSecurityService;
 import com.sequenceiq.cloudbreak.service.cluster.AmbariClientProvider;
-import com.sequenceiq.cloudbreak.service.cluster.NotEnoughNodeException;
 import com.sequenceiq.cloudbreak.service.cluster.NotRecommendedNodeRemovalException;
 import com.sequenceiq.cloudbreak.service.cluster.filter.ConfigParam;
 import com.sequenceiq.cloudbreak.service.cluster.filter.HostFilterService;
@@ -283,7 +287,7 @@ public class AmbariDecommissioner {
         PollingResult pollingResult = startServicesIfNeeded(stack, ambariClient, runningComponents);
         if (isSuccess(pollingResult)) {
             List<String> hostList = new ArrayList<>(hostsToRemove.keySet());
-            Map<String, Integer> decommissionRequests = decommissionComponents(ambariClient, hostList, runningComponents);
+            Map<String, Integer> decommissionRequests = decommissionComponents(ambariClient, hostList, runningComponents, stack);
             if (!decommissionRequests.isEmpty()) {
                 pollingResult =
                         ambariOperationService.waitForOperations(stack, ambariClient, decommissionRequests, DECOMMISSION_AMBARI_PROGRESS_STATE).getLeft();
@@ -395,8 +399,8 @@ public class AmbariDecommissioner {
         int adjustment = Math.abs(scalingAdjustment);
         if (hostSize + reservedInstances - adjustment < replication || hostSize < adjustment) {
             LOGGER.info("Cannot downscale: replication: {}, adjustment: {}, filtered host size: {}", replication, scalingAdjustment, hostSize);
-            throw new NotEnoughNodeException("There is not enough node to downscale. "
-                    + "Check the replication factor and the ApplicationMaster occupation.");
+//            throw new NotEnoughNodeException("There is not enough node to downscale. "
+//                    + "Check the replication factor and the ApplicationMaster occupation.");
         }
     }
 
@@ -558,9 +562,31 @@ public class AmbariDecommissioner {
     }
 
     private Map<String, Integer> decommissionComponents(AmbariClient ambariClient, Collection<String> hosts,
-            Map<String, Map<String, String>> runningComponents) {
+            Map<String, Map<String, String>> runningComponents, Stack stack) {
         Map<String, Integer> decommissionRequests = new HashMap<>();
+        List<String> instances = stack.getInstanceMetaDataAsList().stream()
+                .filter(instanceMetaData -> hosts.contains(instanceMetaData.getDiscoveryFQDN()))
+                .map(InstanceMetaData::getInstanceId)
+                .collect(Collectors.toList());
+        Optional<Resource> volumeSet = stack.getResourcesByType(ResourceType.AWS_VOLUMESET).stream()
+                .filter(resource -> instances.contains(resource.getInstanceId()))
+                .findFirst();
+        Boolean decomissionVolumes = volumeSet
+                .map(resource -> {
+                    try {
+                        return resource.getAttributes().get(VolumeSetAttributes.class);
+                    } catch (IOException e) {
+                        LOGGER.error("VolumeSetAttributes conversion failed.", e);
+                        return null;
+                    }
+                })
+                .map(VolumeSetAttributes::getDeleteOnTermination)
+                .orElse(Boolean.TRUE);
         COMPONENTS_NEED_TO_DECOMMISSION.keySet().forEach(component -> {
+            if (!decomissionVolumes && component.equals(DATANODE)) {
+                return;
+            }
+
             List<String> hostsRunService = hosts.stream().filter(hn -> runningComponents.get(hn).keySet().contains(component)).collect(Collectors.toList());
             Function<List<String>, Integer> action;
             switch (component) {

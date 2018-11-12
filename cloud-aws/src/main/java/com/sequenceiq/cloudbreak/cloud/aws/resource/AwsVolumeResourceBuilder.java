@@ -136,12 +136,13 @@ public class AwsVolumeResourceBuilder extends AbstractAwsComputeBuilder {
             volumeSetMap.put(resource.getName(), Collections.synchronizedList(new ArrayList<>()));
 
             VolumeSetAttributes volumeSet = resource.getParameter(CloudResource.ATTRIBUTES, VolumeSetAttributes.class);
+            DeviceNameGenerator generator = new DeviceNameGenerator();
             futures.addAll(volumeSet.getVolumes().stream()
                     .map(createVolumeRequest(snapshotId, tagSpecification, volumeSet))
                     .map(request -> intermediateBuilderExecutor.submit(() -> {
                         CreateVolumeResult result = client.createVolume(request);
                         String volumeId = result.getVolume().getVolumeId();
-                        volumeSetMap.get(resource.getName()).add(new VolumeSetAttributes.Volume(volumeId, null, null, null));
+                        volumeSetMap.get(resource.getName()).add(new VolumeSetAttributes.Volume(volumeId, null, null, generator.next()));
                     }))
                     .collect(Collectors.toList()));
         }

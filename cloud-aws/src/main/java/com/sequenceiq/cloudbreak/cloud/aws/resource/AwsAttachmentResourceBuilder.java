@@ -68,10 +68,8 @@ public class AwsAttachmentResourceBuilder extends AbstractAwsComputeBuilder {
         String regionName = auth.getCloudContext().getLocation().getRegion().value();
         AmazonEC2Client client = awsClient.createAccess(credentialView, regionName);
 
-        DeviceNameGenerator generator = new DeviceNameGenerator();
         VolumeSetAttributes volumeSetAttributes = volumeSet.getParameter(CloudResource.ATTRIBUTES, VolumeSetAttributes.class);
         List<Future<?>> futures = volumeSetAttributes.getVolumes().stream()
-                .peek(volume -> volume.setDevice(generator.next()))
                 .map(volume -> new AttachVolumeRequest()
                         .withInstanceId(instance.getInstanceId())
                         .withVolumeId(volume.getId())

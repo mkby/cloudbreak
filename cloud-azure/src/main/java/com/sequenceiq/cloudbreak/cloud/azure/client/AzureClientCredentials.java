@@ -52,7 +52,7 @@ public class AzureClientCredentials {
         ApplicationTokenCredentials applicationTokenCredentials = new ApplicationTokenCredentials(clientId, tenantId, secretKey, azureEnvironment);
         Optional<Boolean> codeGrantFlow = Optional.ofNullable(credentialView.getCodeGrantFlow());
 
-        AzureTokenCredentials result = applicationTokenCredentials.withDefaultSubscriptionId(subscriptionId);
+        AzureTokenCredentials result = applicationTokenCredentials;
         if (codeGrantFlow.orElse(Boolean.FALSE)) {
             String refreshToken = credentialView.getRefreshToken();
             if (StringUtils.isNoneEmpty(refreshToken)) {
@@ -78,7 +78,7 @@ public class AzureClientCredentials {
         } else {
             LOGGER.info("Creating Azure credentials with application token credentials, credential: {}", credentialView.getName());
         }
-        return result;
+        return result.withDefaultSubscriptionId(subscriptionId);
     }
 
     public Optional<String> getRefreshToken() {

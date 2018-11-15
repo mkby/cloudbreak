@@ -6,6 +6,7 @@ import static com.sequenceiq.cloudbreak.util.NameUtil.generateArchiveName;
 import java.io.IOException;
 import java.util.Date;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -16,7 +17,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Resource;
 import javax.inject.Inject;
 
-import org.mapstruct.ap.internal.util.Collections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -246,7 +246,7 @@ public class CredentialService extends AbstractWorkspaceAwareResourceService<Cre
     public Credential authorizeCodeGrantFlow(String code, String state, Long workspaceId, User user, String platform) {
         String cloudPlatformUppercased = platform.toUpperCase();
         credentialValidator.validateCredentialCloudPlatform(cloudPlatformUppercased);
-        Set<Credential> credentials = credentialRepository.findActiveForWorkspaceFilterByPlatforms(workspaceId, Collections.asSet(cloudPlatformUppercased));
+        Set<Credential> credentials = credentialRepository.findActiveForWorkspaceFilterByPlatforms(workspaceId, List.of(cloudPlatformUppercased));
         Credential original = credentials.stream()
                 .filter(cred -> state.equalsIgnoreCase(String.valueOf(new Json(cred.getAttributes()).getMap().get("codeGrantFlowState"))))
                 .findFirst()

@@ -55,7 +55,8 @@ public class AzureCredentialAppCreationCommand {
 
     public String getReplyUrl(String workspaceId) {
         String cbAzAppAuthUri = String.format(CB_AZ_APP_AUTH_URI_PATTERN, workspaceId);
-        return deploymentAddress.concat(cbAzAppAuthUri);
+        String replyUrl = deploymentAddress.endsWith(DELIMITER) ? deploymentAddress : deploymentAddress.concat(DELIMITER);
+        return replyUrl.concat(cbAzAppAuthUri);
     }
 
     private Map<String, Object> buildModel() {

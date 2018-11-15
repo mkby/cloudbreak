@@ -68,12 +68,12 @@ public class AzureClientCredentials {
                 }
 
                 Map<String, AuthenticationResult> tokens = Map.of(resource, authenticationResult);
-                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, resource, tokens, secretKey)
-                        .withDefaultSubscriptionId(subscriptionId);
+                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, resource, tokens, secretKey);
             } else {
                 LOGGER.info("Creating Azure credentials for a new delegated token with authorization code, credential: {}", credentialView.getName());
-                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, credentialView.getAppReplyUrl(), credentialView.getAuthorizationCode())
-                    .withDefaultSubscriptionId(subscriptionId);
+                String appReplyUrl = credentialView.getAppReplyUrl();
+                String authorizationCode = credentialView.getAuthorizationCode();
+                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, appReplyUrl, authorizationCode, secretKey);
             }
         } else {
             LOGGER.info("Creating Azure credentials with application token credentials, credential: {}", credentialView.getName());

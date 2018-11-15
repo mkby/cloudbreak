@@ -63,12 +63,14 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
      * @param redirectUrl the URL to redirect to after authentication in Active Directory
      * @param authorizationCode the oauth2 authorization code
      */
-    public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl, String authorizationCode) {
+    public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl, String authorizationCode, String clientSecret) {
         super(applicationCredentials.environment(), applicationCredentials.domain());
         this.tokens = new ConcurrentHashMap<>();
         this.redirectUrl = redirectUrl;
         this.authorizationCode = authorizationCode;
         this.cbRefreshTokenClient = new CBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
+        this.clientSecret = clientSecret;
+        this.applicationCredentials = applicationCredentials;
     }
 
     /**

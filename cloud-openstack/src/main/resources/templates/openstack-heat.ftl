@@ -4,7 +4,7 @@ heat_template_version: 2014-10-16
 description: >
   Heat template for Cloudbreak
 
-codeGrantFlowInitParams:
+parameters:
 
   key_name:
     type: string

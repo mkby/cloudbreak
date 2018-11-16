@@ -71,7 +71,7 @@ tags:
       - "application/json"
       produces:
       - "application/json"
-      codeGrantFlowInitParams: []
+      parameters: []
       responses:
         200:
           description: "successful operation"

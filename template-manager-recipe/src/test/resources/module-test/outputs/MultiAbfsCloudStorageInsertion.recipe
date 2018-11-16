@@ -15,19 +15,19 @@ function printLogic() {
 	if false; then
 		printIfValid "instanceProfile:                            " "{{{fileSystemConfigs.s3.instanceProfile}}}"
 		printIfValid "storage container:                          " "{{{fileSystemConfigs.s3.storageContainer}}}"
-		printIfValid "Attached cloud storage location codeGrantFlowInitParams: " ""
+		printIfValid "Attached cloud storage location parameters: " ""
 		printIfValid "default file system?                        " "{{{fileSystemConfigs.s3.defaultFs}}}"
 	elif false; then
 		printIfValid "service account email address:              " "{{{fileSystemConfigs.gcs.serviceAccountEmail}}}"
 		printIfValid "storage container:                          " "{{{fileSystemConfigs.gcs.storageContainer}}}"
-		printIfValid "Attached cloud storage location codeGrantFlowInitParams: " ""
+		printIfValid "Attached cloud storage location parameters: " ""
 		printIfValid "default file system?                        " "{{{fileSystemConfigs.gcs.defaultFs}}}"
 	elif true; then
 		printIfValid "account key:                                " "someKeyValue"
 		printIfValid "account name:                               " "nameOfAccount"
 		printIfValid "storage container name:                     " "ContainerName"
 		printIfValid "storage container:                          " "StorageContainer"
-		printIfValid "Attached cloud storage location codeGrantFlowInitParams: " ""
+		printIfValid "Attached cloud storage location parameters: " ""
 		printIfValid "default file system?                        " "false"
 	elif false; then
 		printIfValid "account name:                               " "{{{fileSystemConfigs.adls.accountName}}}"
@@ -35,14 +35,14 @@ function printLogic() {
 		printIfValid "credential:                                 " "{{{fileSystemConfigs.adls.credential}}}"
 		printIfValid "tenant ID:                                  " "{{{fileSystemConfigs.adls.tenantId}}}"
 		printIfValid "storage container:                          " "{{{fileSystemConfigs.adls.storageContainer}}}"
-		printIfValid "Attached cloud storage location codeGrantFlowInitParams: " ""
+		printIfValid "Attached cloud storage location parameters: " ""
 		printIfValid "default file system?                        " "{{{fileSystemConfigs.adls.defaultFs}}}"
 	elif false; then
 		printIfValid "account key:                                " "{{{fileSystemConfigs.wasb.accountKey}}}"
 		printIfValid "account name:                               " "{{{fileSystemConfigs.wasb.accountName}}}"
 		printIfValid "storage container name:                     " "{{{fileSystemConfigs.wasb.storageContainerName}}}"
 		printIfValid "secure?                                     " "{{{fileSystemConfigs.wasb.secure}}}"
-		printIfValid "Attached cloud storage location codeGrantFlowInitParams: " ""
+		printIfValid "Attached cloud storage location parameters: " ""
 		printIfValid "default file system?                        " "{{{fileSystemConfigs.wasb.defaultFs}}}"
 	fi
 }

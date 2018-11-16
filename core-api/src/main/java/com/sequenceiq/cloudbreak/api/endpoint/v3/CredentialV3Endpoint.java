@@ -17,6 +17,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.sequenceiq.cloudbreak.api.model.CredentialRequest;
 import com.sequenceiq.cloudbreak.api.model.CredentialResponse;
+import com.sequenceiq.cloudbreak.api.model.v3.credential.CodeGrantFlowInitResult;
 import com.sequenceiq.cloudbreak.api.model.v3.credential.CredentialPrerequisites;
 import com.sequenceiq.cloudbreak.doc.ContentType;
 import com.sequenceiq.cloudbreak.doc.ControllerDescription;
@@ -85,7 +86,7 @@ public interface CredentialV3Endpoint {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = CredentialOpDescription.INIT_CODE_GRANT_FLOW, produces = ContentType.JSON, notes = Notes.CREDENTIAL_NOTES,
             nickname = "initCodeGrantFlowBasedCredentialInWorkspace")
-    String initCodeGrantFlow(@PathParam("workspaceId") Long workspaceId, @Valid CredentialRequest credentialRequest);
+    CodeGrantFlowInitResult initCodeGrantFlow(@PathParam("workspaceId") Long workspaceId, @Valid CredentialRequest credentialRequest);
 
     @GET
     @Path("codegrantflow/authorization/{cloudPlatform}")

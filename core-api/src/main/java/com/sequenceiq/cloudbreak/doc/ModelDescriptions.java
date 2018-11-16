@@ -48,6 +48,7 @@ public class ModelDescriptions {
                 + "describes the necessary AWS policies for cloud resource provisioning.";
         public static final String AZURE_APP_CREATION_COMMAND = "Azure CLI command to create Azure AD Application as prerequisite for credential creation."
                 + "The field is base64 encoded.";
+        public static final String CODE_GRANT_FLOW_LOGIN_URL = "Login URL for code grant flow";
     }
 
     public static class OrchestratorModelDescription {

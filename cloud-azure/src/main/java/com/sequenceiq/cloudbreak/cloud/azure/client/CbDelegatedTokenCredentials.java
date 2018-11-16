@@ -111,7 +111,7 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
      * @return the URL to authenticate through OAuth2
      */
     public String generateAuthenticationUrl(String state) {
-        return String.format("%s/%s/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=%s&response_mode=query&state=%s&resource=%s",
+        return String.format("%s%s/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=%s&response_mode=query&state=%s&resource=%s",
                 environment().activeDirectoryEndpoint(), domain(), clientId(), this.redirectUrl, state, environment().managementEndpoint());
     }
 

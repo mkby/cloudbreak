@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import com.sequenceiq.cloudbreak.api.endpoint.v3.CredentialV3Endpoint;
 import com.sequenceiq.cloudbreak.api.model.CredentialRequest;
 import com.sequenceiq.cloudbreak.api.model.CredentialResponse;
+import com.sequenceiq.cloudbreak.api.model.v3.credential.CodeGrantFlowInitResult;
 import com.sequenceiq.cloudbreak.api.model.v3.credential.CredentialPrerequisites;
 import com.sequenceiq.cloudbreak.common.type.ResourceEvent;
 import com.sequenceiq.cloudbreak.domain.Credential;
@@ -96,9 +97,10 @@ public class CredentialV3Controller extends NotificationController implements Cr
     }
 
     @Override
-    public String initCodeGrantFlow(Long workspaceId, CredentialRequest credentialRequest) {
+    public CodeGrantFlowInitResult initCodeGrantFlow(Long workspaceId, CredentialRequest credentialRequest) {
         User user = userService.getOrCreate(restRequestThreadLocalService.getCloudbreakUser());
-        return credentialService.initCodeGrantFlow(workspaceId, conversionService.convert(credentialRequest, Credential.class), user);
+        String loginURL = credentialService.initCodeGrantFlow(workspaceId, conversionService.convert(credentialRequest, Credential.class), user);
+        return new CodeGrantFlowInitResult(loginURL);
     }
 
     @Override

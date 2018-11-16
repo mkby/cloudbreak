@@ -89,7 +89,7 @@ public class AzureCredentialConnector implements CredentialConnector {
                 azureCredential.getSecretKey(),
                 AzureEnvironment.AZURE);
 
-        String replyUrl = appCreationCommand.getReplyUrl(String.valueOf(cloudContext.getWorkspaceId()));
+        String replyUrl = appCreationCommand.getRedirectURL(String.valueOf(cloudContext.getWorkspaceId()));
         CbDelegatedTokenCredentials creds = new CbDelegatedTokenCredentials(applicationCredentials, replyUrl);
 
         String state = UUID.randomUUID().toString();

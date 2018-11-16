@@ -253,9 +253,10 @@ public class CredentialService extends AbstractWorkspaceAwareResourceService<Cre
                 .orElseThrow(notFound("Code grant flow based credential for user with state:", state));
         LOGGER.info("Authorizing credential('{}') with Authorization Code Grant flow for workspace: {}", original.getName(),
                 getWorkspaceService().get(workspaceId, user).getName());
+        String attributesSecret = original.getAttributesSecret();
         putToCredentialAttributes(original, Map.of("authorizationCode", code));
         Credential updated = super.create(credentialAdapter.verify(original, workspaceId, user.getUserId()), workspaceId, user);
-        secretService.delete(original.getAttributesSecret());
+        secretService.delete(attributesSecret);
         return updated;
     }
 

@@ -243,6 +243,22 @@ public class CredentialService extends AbstractWorkspaceAwareResourceService<Cre
         return String.valueOf(new Json(created.getAttributes()).getMap().get("appLoginUrl"));
     }
 
+    public String initCodeGrantFlow(Long workspaceId, String name, User user) {
+        Credential original = credentialRepository
+                .findActiveByNameAndWorkspaceIdFilterByPlatforms(name, workspaceId, accountPreferencesService.enabledPlatforms());
+        String originalAttributes = original.getAttributes();
+        boolean codeGrantFlow = Boolean.valueOf(new Json(originalAttributes).getMap().get("codeGrantFlow").toString());
+        if (!codeGrantFlow) {
+            throw new UnsupportedOperationException("This operation is only allowed on Authorization Code Grant flow based credentails.");
+        }
+        LOGGER.info("Reinitializing Authorization Code Grant flow on credential('{}') in workspace: {}", original.getName(),
+                getWorkspaceService().get(workspaceId, user).getName());
+        Credential updated = credentialAdapter.initCodeGrantFlow(original, workspaceId, user.getUserId());
+        updated = super.create(updated, workspaceId, user);
+        secretService.delete(originalAttributes);
+        return String.valueOf(new Json(updated.getAttributes()).getMap().get("appLoginUrl"));
+    }
+
     public Credential authorizeCodeGrantFlow(String code, String state, Long workspaceId, User user, String platform) {
         String cloudPlatformUppercased = platform.toUpperCase();
         credentialValidator.validateCredentialCloudPlatform(cloudPlatformUppercased);

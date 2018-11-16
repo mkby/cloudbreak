@@ -88,6 +88,13 @@ public interface CredentialV3Endpoint {
             nickname = "initCodeGrantFlowBasedCredentialInWorkspace")
     CodeGrantFlowInitResult initCodeGrantFlow(@PathParam("workspaceId") Long workspaceId, @Valid CredentialRequest credentialRequest);
 
+    @PUT
+    @Path("codegrantflow/init/{name}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = CredentialOpDescription.INIT_CODE_GRANT_FLOW_ON_EXISTING, produces = ContentType.JSON, notes = Notes.CREDENTIAL_NOTES,
+            nickname = "initCodeGrantFlowOnExistingCredentialInWorkspace")
+    CodeGrantFlowInitResult initCodeGrantFlowOnExisting(@PathParam("workspaceId") Long workspaceId, @PathParam("name") String name);
+
     @GET
     @Path("codegrantflow/authorization/{cloudPlatform}")
     @Produces(MediaType.APPLICATION_JSON)

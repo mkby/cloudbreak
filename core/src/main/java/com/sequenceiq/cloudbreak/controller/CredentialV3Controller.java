@@ -104,6 +104,13 @@ public class CredentialV3Controller extends NotificationController implements Cr
     }
 
     @Override
+    public CodeGrantFlowInitResult initCodeGrantFlowOnExisting(Long workspaceId, String name) {
+        User user = userService.getOrCreate(restRequestThreadLocalService.getCloudbreakUser());
+        String loginURL = credentialService.initCodeGrantFlow(workspaceId, name, user);
+        return new CodeGrantFlowInitResult(loginURL);
+    }
+
+    @Override
     public CredentialResponse authorizeCodeGrantFlow(Long workspaceId, String platform, String code, String state) {
         User user = userService.getOrCreate(restRequestThreadLocalService.getCloudbreakUser());
         Credential credential = credentialService.authorizeCodeGrantFlow(code, state, workspaceId, user, platform);

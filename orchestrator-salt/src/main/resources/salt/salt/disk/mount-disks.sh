@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+SEMAPHORE_FILE=/var/cb-mount-executed
+
 format_disks() {
   lazy_format_disks
   cd /hadoopfs/fs1 && mkdir logs logs/ambari-server logs/ambari-agent logs/consul-watch logs/kerberos
@@ -30,9 +33,15 @@ lazy_format_disks() {
 }
 
 main() {
-    if [ ! -f "/var/cb-mount-executed" ]; then
+    local script_name="mount-disk"
+    if [ ! -f "$SEMAPHORE_FILE" ]; then
+        echo "semaphore file $SEMAPHORE_FILE missing, cannot proceed. Exiting"
+        exit
+    fi
+    script_executed=$(grep $script_name "$SEMAPHORE_FILE")
+    if [ -z "$script_executed" ]; then
         [[ $CLOUD_PLATFORM == "AWS" ]] && format_disks
-        echo $(date +%Y-%m-%d:%H:%M:%S) > /var/cb-mount-executed
+        echo "$(date +%Y-%m-%d:%H:%M:%S) - $script_name executed" >> $SEMAPHORE_FILE
     fi
 }
 

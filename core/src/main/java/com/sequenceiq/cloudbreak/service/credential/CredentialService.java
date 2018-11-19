@@ -233,19 +233,20 @@ public class CredentialService extends AbstractWorkspaceAwareResourceService<Cre
         return credentialPrerequisiteService.getPrerequisites(user, workspace, cloudPlatformUppercased);
     }
 
-    public String initCodeGrantFlow(Long workspaceId, Credential credential, User user) {
+    public String initCodeGrantFlow(Long workspaceId, @Nonnull Credential credential, @Nonnull User user) {
         LOGGER.info("Initializing credential('{}') with Authorization Code Grant flow for workspace: {}", credential.getName(),
                 getWorkspaceService().get(workspaceId, user).getName());
         credentialValidator.validateCredentialCloudPlatform(credential.cloudPlatform());
         putToCredentialAttributes(credential, Map.of("codeGrantFlow", true));
         Credential created = credentialAdapter.initCodeGrantFlow(credential, workspaceId, user.getUserId());
         created = super.create(created, workspaceId, user);
-        return String.valueOf(new Json(created.getAttributes()).getMap().get("appLoginUrl"));
+        return getCodeGrantFlowAppLoginUrl(created.getAttributes());
     }
 
-    public String initCodeGrantFlow(Long workspaceId, String name, User user) {
-        Credential original = credentialRepository
-                .findActiveByNameAndWorkspaceIdFilterByPlatforms(name, workspaceId, accountPreferencesService.enabledPlatforms());
+    public String initCodeGrantFlow(Long workspaceId, String name, @Nonnull User user) {
+        Credential original = Optional.ofNullable(credentialRepository
+                .findActiveByNameAndWorkspaceIdFilterByPlatforms(name, workspaceId, preferencesService.enabledPlatforms()))
+                .orElseThrow(notFound(NOT_FOUND_FORMAT_MESS_NAME, name));
         String originalAttributes = original.getAttributes();
         boolean codeGrantFlow = Boolean.valueOf(new Json(originalAttributes).getMap().get("codeGrantFlow").toString());
         if (!codeGrantFlow) {
@@ -256,10 +257,10 @@ public class CredentialService extends AbstractWorkspaceAwareResourceService<Cre
         Credential updated = credentialAdapter.initCodeGrantFlow(original, workspaceId, user.getUserId());
         updated = super.create(updated, workspaceId, user);
         secretService.delete(originalAttributes);
-        return String.valueOf(new Json(updated.getAttributes()).getMap().get("appLoginUrl"));
+        return getCodeGrantFlowAppLoginUrl(updated.getAttributes());
     }
 
-    public Credential authorizeCodeGrantFlow(String code, String state, Long workspaceId, User user, String platform) {
+    public Credential authorizeCodeGrantFlow(String code, @Nonnull String state, Long workspaceId, @Nonnull User user, @Nonnull String platform) {
         String cloudPlatformUppercased = platform.toUpperCase();
         credentialValidator.validateCredentialCloudPlatform(cloudPlatformUppercased);
         Set<Credential> credentials = credentialRepository.findActiveForWorkspaceFilterByPlatforms(workspaceId, List.of(cloudPlatformUppercased));
@@ -349,5 +350,11 @@ public class CredentialService extends AbstractWorkspaceAwareResourceService<Cre
             LOGGER.warn(msg, e);
             throw new CloudbreakServiceException(msg, e);
         }
+    }
+
+    private String getCodeGrantFlowAppLoginUrl(String credentialAttributes) {
+        Object appLoginUrl = Optional.ofNullable(new Json(credentialAttributes).getMap().get("appLoginUrl"))
+                .orElseThrow(() -> new CloudbreakServiceException("Unable to obtain App login url!"));
+        return String.valueOf(appLoginUrl);
     }
 }

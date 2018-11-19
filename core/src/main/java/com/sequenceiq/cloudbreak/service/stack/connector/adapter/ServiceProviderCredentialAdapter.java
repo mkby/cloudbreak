@@ -114,7 +114,7 @@ public class ServiceProviderCredentialAdapter {
 
     public Credential initCodeGrantFlow(Credential credential, Long workspaceId, String userId) {
         CloudContext cloudContext = new CloudContext(credential.getId(), credential.getName(),
-                credential.cloudPlatform(), credential.getOwner(), userId, workspaceId);
+                credential.cloudPlatform(), userId, workspaceId);
         CloudCredential cloudCredential = credentialConverter.convert(credential);
         InitCodeGrantFlowRequest request = new InitCodeGrantFlowRequest(cloudContext, cloudCredential);
         LOGGER.info("Triggering event: {}", request);

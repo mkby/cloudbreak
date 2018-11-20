@@ -16,7 +16,6 @@ public class V3CredentialCodeGrantFlowParser extends RestUrlParser {
 
     private static final int RESOURCE_TYPE_GROUP_NUMBER = 2;
 
-    //Example: v3/11/codegrantflow/init/RESOURCE_NAME
     private static final Pattern PATTERN = Pattern.compile("v3/(\\d+)/([a-z|-]+)/codegrantflow/([a-z|-]+)/([^/]+)");
 
     @Override

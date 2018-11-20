@@ -1,0 +1,31 @@
+{
+  "availableToOtherTenants": false,
+  "displayName": "cloudbreak-app",
+  "homepage": "${cloudbreakAddress}",
+  "identifierUris": [
+    "${identifierURI}"
+  ],
+  "oauth2AllowImplicitFlow": false,
+  "oauth2AllowUrlPathMatching": false,
+  "replyUrls": [
+    "${cloudbreakReplyUrl}"
+  ],
+  "requiredResourceAccess": [
+    {
+      "resourceAppId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "resourceAccess": [
+        {
+          "id": "41094075-9dad-400e-a0bd-54e686782033",
+          "type": "Scope"
+        }
+      ]
+    }
+  ],
+  "passwordCredentials": [
+    {
+      "endDate": "${expirationDate}",
+      "keyId": "${keyId}",
+      "value": "${appSecret}"
+    }
+  ]
+}

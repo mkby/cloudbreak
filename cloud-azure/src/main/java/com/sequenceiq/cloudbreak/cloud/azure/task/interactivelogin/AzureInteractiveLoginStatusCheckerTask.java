@@ -106,7 +106,6 @@ public class AzureInteractiveLoginStatusCheckerTask extends PollBooleanStateTask
                     String appId = applicationCreator.createApplication(graphApiAccessToken, armCredentialView.getTenantId(), secretKey);
                     sendStatusMessage(extendedCloudCredential, "Cloudbreak application created");
                     ServicePrincipalInner sp = principalCreator.createServicePrincipal(graphApiAccessToken, appId, armCredentialView.getTenantId());
-                    String principalObjectId =  sp.objectId();
                     String notification = new StringBuilder("Principal created for application!")
                             .append(" Name: ")
                             .append(sp.displayName())
@@ -114,11 +113,6 @@ public class AzureInteractiveLoginStatusCheckerTask extends PollBooleanStateTask
                             .append(sp.appId())
                             .toString();
                     sendStatusMessage(extendedCloudCredential, notification);
-                    String roleName = armCredentialView.getRoleName();
-                    String roleType = armCredentialView.getRoleType();
-                    String roleId = azureRoleManager.handleRoleOperations(managementApiToken, armCredentialView.getSubscriptionId(), roleName, roleType);
-                    azureRoleManager.assignRole(managementApiToken, armCredentialView.getSubscriptionId(), roleId, principalObjectId);
-                    sendStatusMessage(extendedCloudCredential, "Role assigned for principal");
 
                     extendedCloudCredential.putParameter("accessKey", appId);
                     extendedCloudCredential.putParameter("secretKey", secretKey);
@@ -126,7 +120,7 @@ public class AzureInteractiveLoginStatusCheckerTask extends PollBooleanStateTask
 
                     armInteractiveLoginStatusCheckerContext.getCredentialNotifier().createCredential(getAuthenticatedContext().getCloudContext(),
                             extendedCloudCredential);
-                } catch (InteractiveLoginException | InteractiveLoginUnrecoverableException e) {
+                } catch (InteractiveLoginException e) {
                     LOGGER.error("Interactive login failed", e);
                     sendErrorStatusMessage(extendedCloudCredential, e.getMessage());
                 }

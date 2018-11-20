@@ -89,7 +89,6 @@ public class ServiceProviderCredentialAdapterTest {
         MockitoAnnotations.initMocks(this);
         when(credential.getId()).thenReturn(CREDENTIAL_ID);
         when(credential.getName()).thenReturn(CREDENTIAL_NAME);
-        when(credential.getOwner()).thenReturn(CREDENTIAL_OWNER);
         when(credential.cloudPlatform()).thenReturn(CLOUD_PLATFORM);
         when(initCodeGrantFlowResponse.getStatus()).thenReturn(EventStatus.OK);
         when(initCodeGrantFlowRequest.await()).thenReturn(initCodeGrantFlowResponse);
@@ -132,7 +131,6 @@ public class ServiceProviderCredentialAdapterTest {
         credential.setId(CREDENTIAL_ID);
         credential.setCloudPlatform(CLOUD_PLATFORM);
         credential.setName(CREDENTIAL_NAME);
-        credential.setOwner(CREDENTIAL_OWNER);
         when(credentialConverter.convert(credential)).thenReturn(convertedCredential);
         when(convertedCredential.getParameters()).thenReturn(Map.of(expectedAdditionalAttributeKey, expectedAdditionalAttributeValue));
 

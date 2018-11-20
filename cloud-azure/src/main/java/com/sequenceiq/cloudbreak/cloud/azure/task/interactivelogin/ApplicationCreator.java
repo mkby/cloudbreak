@@ -4,10 +4,8 @@ import static com.sequenceiq.cloudbreak.cloud.azure.task.interactivelogin.AzureI
 import static com.sequenceiq.cloudbreak.cloud.azure.task.interactivelogin.AzureInteractiveLoginStatusCheckerTask.GRAPH_WINDOWS;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.UUID;
 
+import javax.inject.Inject;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -23,9 +21,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.sequenceiq.cloudbreak.cloud.azure.AzureCredentialAppCreationCommand;
 
 /**
  * Created by perdos on 10/18/16.
@@ -33,9 +29,10 @@ import com.google.gson.JsonPrimitive;
 @Service
 public class ApplicationCreator {
 
-    public static final int CREDENTIAL_END_YEAR = 3;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationCreator.class);
+
+    @Inject
+    private AzureCredentialAppCreationCommand appCreationCommand;
 
     public String createApplication(String accessToken, String tenantId, String secret) throws InteractiveLoginException {
         Response response = createApplicationWithGraph(accessToken, tenantId, secret);
@@ -67,29 +64,8 @@ public class ApplicationCreator {
         WebTarget resource = client.target(GRAPH_WINDOWS + tenantId);
         Builder request = resource.path("/applications").queryParam("api-version", GRAPH_API_VERSION).request();
         request.accept(MediaType.APPLICATION_JSON);
-
-        long timeStamp = new Date().getTime();
-
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("availableToOtherTenants", false);
-        jsonObject.addProperty("displayName", "hwx-cloud-" + timeStamp);
-        jsonObject.addProperty("homepage", "http://hwx-cloud-" + timeStamp);
-
-        JsonArray identifierUris = new JsonArray();
-        identifierUris.add(new JsonPrimitive("http://hwx-cloud-" + timeStamp));
-        jsonObject.add("identifierUris", identifierUris);
-
-        JsonArray passwordCredentials = new JsonArray();
-        JsonObject password = new JsonObject();
-        password.addProperty("keyId", UUID.randomUUID().toString());
-        password.addProperty("value", secret);
-        password.addProperty("startDate", LocalDateTime.now().minusDays(1).toString());
-        password.addProperty("endDate", LocalDateTime.now().plusYears(CREDENTIAL_END_YEAR).toString());
-        passwordCredentials.add(password);
-
-        jsonObject.add("passwordCredentials", passwordCredentials);
-
         request.header("Authorization", "Bearer " + accessToken);
-        return request.post(Entity.entity(jsonObject.toString(), MediaType.APPLICATION_JSON));
+        String appCreationJSON = appCreationCommand.generateJSON(secret);
+        return request.post(Entity.entity(appCreationJSON, MediaType.APPLICATION_JSON));
     }
 }

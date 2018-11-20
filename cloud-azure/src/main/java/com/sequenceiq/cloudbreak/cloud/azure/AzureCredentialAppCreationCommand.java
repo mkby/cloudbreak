@@ -31,8 +31,11 @@ public class AzureCredentialAppCreationCommand {
 
     private static final String DELIMITER = "/";
 
-    @Value("${cb.arm.app.creation.template.path:}")
-    private String appCreationTemplatePath;
+    @Value("${cb.arm.app.creation.template.command.path:}")
+    private String appCreationCommandTemplatePath;
+
+    @Value("${cb.arm.app.creation.template.json.path:}")
+    private String appCreationJSONTemplatePath;
 
     @Value("${cb.deployment.address:https://192.168.64.2}")
     private String deploymentAddress;
@@ -42,11 +45,24 @@ public class AzureCredentialAppCreationCommand {
 
     public String generate() {
         try {
-            Template template = freemarkerConfiguration.getTemplate(appCreationTemplatePath, "UTF-8");
+            Template template = freemarkerConfiguration.getTemplate(appCreationCommandTemplatePath, "UTF-8");
             Map<String, Object> model = buildModel();
             return processTemplateIntoString(template, model);
         } catch (IOException | TemplateException e) {
-            String message = String.format("Failed to process the Azure AD App creation template from path: '%s'", appCreationTemplatePath);
+            String message = String.format("Failed to process the Azure AD App creation template from path: '%s'", appCreationCommandTemplatePath);
+            throw new CloudConnectorException(message, e);
+        }
+    }
+
+    public String generateJSON(String appSecret) {
+        try {
+            Template template = freemarkerConfiguration.getTemplate(appCreationJSONTemplatePath, "UTF-8");
+            Map<String, Object> model = buildModel();
+            model.put("appSecret", appSecret);
+            model.put("keyId", UUID.randomUUID().toString());
+            return processTemplateIntoString(template, model);
+        } catch (IOException | TemplateException e) {
+            String message = String.format("Failed to process the Azure AD App creation template from path: '%s'", appCreationJSONTemplatePath);
             throw new CloudConnectorException(message, e);
         }
     }

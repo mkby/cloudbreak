@@ -18,7 +18,7 @@ import retrofit2.http.POST;
 import retrofit2.http.Path;
 import rx.Observable;
 
-public final class CBRefreshTokenClient {
+public class CBRefreshTokenClient {
 
     private final RefreshTokenService service;
 

@@ -56,6 +56,9 @@ public class ServiceProviderCredentialAdapter {
     @Inject
     private CredentialPrerequisiteService credentialPrerequisiteService;
 
+    @Inject
+    private RequestProvider requestProvider;
+
     public Credential verify(Credential credential, Long workspaceId, String userId) {
         credential = credentialPrerequisiteService.decorateCredential(credential, userId);
         CloudContext cloudContext = new CloudContext(credential.getId(), credential.getName(), credential.cloudPlatform(), userId, workspaceId);
@@ -116,7 +119,7 @@ public class ServiceProviderCredentialAdapter {
         CloudContext cloudContext = new CloudContext(credential.getId(), credential.getName(),
                 credential.cloudPlatform(), userId, workspaceId);
         CloudCredential cloudCredential = credentialConverter.convert(credential);
-        InitCodeGrantFlowRequest request = new InitCodeGrantFlowRequest(cloudContext, cloudCredential);
+        InitCodeGrantFlowRequest request = requestProvider.getInitCodeGrantFlowRequest(cloudContext, cloudCredential);
         LOGGER.info("Triggering event: {}", request);
         eventBus.notify(request.selector(), eventFactory.createEvent(request));
         try {

@@ -64,32 +64,26 @@ public class CbDelegatedTokenCredentialsTest {
 
     @Test
     public void testAcquireNewAccessTokenWhenNoAuthorizationCodeThenExceptionComes() throws IOException {
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, tokens, CLIENT_SECRET);
-
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("You must acquire an authorization code by redirecting to the authentication URL");
 
-        underTest.acquireNewAccessToken(RESOURCE);
+        new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, tokens, CLIENT_SECRET).acquireNewAccessToken(RESOURCE);
     }
 
     @Test
     public void testGetTokenWhenAccessTokenExistsThenItComesBack() throws IOException {
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, tokens, CLIENT_SECRET);
-
-        String result = underTest.getToken(RESOURCE);
+        String result = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, tokens, CLIENT_SECRET).getToken(RESOURCE);
 
         Assert.assertEquals(ACCESS_TOKEN, result);
     }
 
     @Test
     public void testGetTokenWhenNoTokenAndAuthCodeProvidedThenIllegalArgumentExceptionComes() throws IOException {
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, Collections.emptyMap(),
-                CLIENT_SECRET);
 
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("You must acquire an authorization code by redirecting to the authentication URL");
 
-        underTest.getToken(RESOURCE);
+        new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, Collections.emptyMap(), CLIENT_SECRET).getToken(RESOURCE);
     }
 
     @Test
@@ -97,7 +91,7 @@ public class CbDelegatedTokenCredentialsTest {
                     throws IOException {
         when(applicationTokenCredentials.environment()).thenReturn(new AzureEnvironment(Map.of("activeDirectoryEndpointUrl", format(TEST_AD_ENDPOINT, HTTP))));
 
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL);
+        var underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL);
         underTest.setAuthorizationCode(AUTHORIZATION_CODE);
 
         thrown.expectMessage("'authority' should use the 'https' scheme");
@@ -108,8 +102,7 @@ public class CbDelegatedTokenCredentialsTest {
 
     @Test
     public void testGetTokenWhenNoAuthorizationCodeProvidedThenIllegalArgumentExceptionComes() throws IOException {
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, Collections.emptyMap(),
-                CLIENT_SECRET);
+        var underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, Collections.emptyMap(), CLIENT_SECRET);
         underTest.setAuthorizationCode(AUTHORIZATION_CODE);
 
         thrown.expectMessage("You must provide a valid Application token credential");
@@ -120,8 +113,7 @@ public class CbDelegatedTokenCredentialsTest {
 
     @Test
     public void testAcquireNewAccessTokenWhenNoAuthorizationCodeProvidedThenIllegalArgumentExceptionComes() throws IOException {
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, Collections.emptyMap(),
-                CLIENT_SECRET);
+        var underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL, Collections.emptyMap(), CLIENT_SECRET);
         underTest.setAuthorizationCode(AUTHORIZATION_CODE);
 
         thrown.expectMessage("You must provide a valid Application token credential");
@@ -132,7 +124,7 @@ public class CbDelegatedTokenCredentialsTest {
 
     @Test
     public void testGetTokenWhenNoSecretProvidedThenAuthenticationExceptionComes() throws IOException {
-        CbDelegatedTokenCredentials underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL);
+        var underTest = new CbDelegatedTokenCredentials(applicationTokenCredentials, REDIRECT_URL);
         underTest.setAuthorizationCode(AUTHORIZATION_CODE);
 
         thrown.expect(AuthenticationException.class);

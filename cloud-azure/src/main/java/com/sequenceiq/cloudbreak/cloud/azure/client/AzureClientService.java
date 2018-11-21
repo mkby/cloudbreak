@@ -1,7 +1,9 @@
 package com.sequenceiq.cloudbreak.cloud.azure.client;
 
+import javax.inject.Inject;
+
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.microsoft.rest.LogLevel;
 import com.sequenceiq.cloudbreak.cloud.azure.view.AzureCredentialView;
@@ -9,11 +11,14 @@ import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.model.CloudCredential;
 
-@Component
+@Service
 public class AzureClientService {
 
     @Value("${cb.azure.loglevel:BASIC}")
     private LogLevel logLevel;
+
+    @Inject
+    private CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
 
     public AuthenticatedContext createAuthenticatedContext(CloudContext cloudContext, CloudCredential cloudCredential) {
         AuthenticatedContext authenticatedContext = new AuthenticatedContext(cloudContext, cloudCredential);
@@ -24,7 +29,7 @@ public class AzureClientService {
 
     public AzureClient getClient(CloudCredential cloudCredential) {
         AzureCredentialView azureCredentialView = new AzureCredentialView(cloudCredential);
-        AzureClientCredentials azureClientCredentials = new AzureClientCredentials(azureCredentialView, logLevel);
+        AzureClientCredentials azureClientCredentials = new AzureClientCredentials(azureCredentialView, logLevel, cbRefreshTokenClientProvider);
         return new AzureClient(azureClientCredentials);
     }
 }

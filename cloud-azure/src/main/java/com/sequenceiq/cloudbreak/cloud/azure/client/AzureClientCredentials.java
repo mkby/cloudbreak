@@ -28,7 +28,10 @@ public class AzureClientCredentials {
 
     private final AzureTokenCredentials azureClientCredentials;
 
-    public AzureClientCredentials(AzureCredentialView credentialView, LogLevel logLevel) {
+    private final CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
+
+    public AzureClientCredentials(AzureCredentialView credentialView, LogLevel logLevel, CBRefreshTokenClientProvider cbRefreshTokenClientProvider) {
+        this.cbRefreshTokenClientProvider = cbRefreshTokenClientProvider;
         this.credentialView = credentialView;
         this.logLevel = logLevel;
         this.azureClientCredentials = getAzureCredentials();
@@ -58,7 +61,7 @@ public class AzureClientCredentials {
             if (StringUtils.isNoneEmpty(refreshToken)) {
                 LOGGER.info("Creating Azure credentials for a new delegated token with refresh token, credential: {}", credentialView.getName());
                 String resource = azureEnvironment.managementEndpoint();
-                CBRefreshTokenClient refreshTokenClient = new CBRefreshTokenClient(azureEnvironment.activeDirectoryEndpoint(), null);
+                CBRefreshTokenClient refreshTokenClient = cbRefreshTokenClientProvider.getCBRefreshTokenClient(azureEnvironment.activeDirectoryEndpoint(), null);
                 AuthenticationResult authenticationResult = refreshTokenClient.refreshToken(tenantId, clientId, secretKey, resource, refreshToken, false);
 
                 if (authenticationResult == null) {

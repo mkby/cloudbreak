@@ -30,7 +30,11 @@ public class AzureClientCredentials {
 
     private final CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
 
-    public AzureClientCredentials(AzureCredentialView credentialView, LogLevel logLevel, CBRefreshTokenClientProvider cbRefreshTokenClientProvider) {
+    private final AuthenticationContextProvider authenticationContextProvider;
+
+    public AzureClientCredentials(AzureCredentialView credentialView, LogLevel logLevel, CBRefreshTokenClientProvider cbRefreshTokenClientProvider,
+                    AuthenticationContextProvider authenticationContextProvider) {
+        this.authenticationContextProvider = authenticationContextProvider;
         this.cbRefreshTokenClientProvider = cbRefreshTokenClientProvider;
         this.credentialView = credentialView;
         this.logLevel = logLevel;
@@ -71,12 +75,14 @@ public class AzureClientCredentials {
                 }
 
                 Map<String, AuthenticationResult> tokens = Map.of(resource, authenticationResult);
-                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, resource, tokens, secretKey);
+                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, resource, tokens, secretKey, authenticationContextProvider,
+                        cbRefreshTokenClientProvider);
             } else {
                 LOGGER.info("Creating Azure credentials for a new delegated token with authorization code, credential: {}", credentialView.getName());
                 String appReplyUrl = credentialView.getAppReplyUrl();
                 String authorizationCode = credentialView.getAuthorizationCode();
-                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, appReplyUrl, authorizationCode, secretKey);
+                result = new CbDelegatedTokenCredentials(applicationTokenCredentials, appReplyUrl, authorizationCode, secretKey, authenticationContextProvider,
+                        cbRefreshTokenClientProvider);
             }
         } else {
             LOGGER.info("Creating Azure credentials with application token credentials, credential: {}", credentialView.getName());

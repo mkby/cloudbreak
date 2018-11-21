@@ -16,7 +16,9 @@ import com.microsoft.azure.credentials.ApplicationTokenCredentials;
 import com.sequenceiq.cloudbreak.api.model.v3.credential.AzureCredentialPrerequisites;
 import com.sequenceiq.cloudbreak.api.model.v3.credential.CredentialPrerequisites;
 import com.sequenceiq.cloudbreak.cloud.CredentialConnector;
+import com.sequenceiq.cloudbreak.cloud.azure.client.AuthenticationContextProvider;
 import com.sequenceiq.cloudbreak.cloud.azure.client.AzureClient;
+import com.sequenceiq.cloudbreak.cloud.azure.client.CBRefreshTokenClientProvider;
 import com.sequenceiq.cloudbreak.cloud.azure.client.CbDelegatedTokenCredentials;
 import com.sequenceiq.cloudbreak.cloud.azure.view.AzureCredentialView;
 import com.sequenceiq.cloudbreak.cloud.context.AuthenticatedContext;
@@ -37,6 +39,12 @@ public class AzureCredentialConnector implements CredentialConnector {
 
     @Inject
     private AzureCredentialAppCreationCommand appCreationCommand;
+
+    @Inject
+    private AuthenticationContextProvider authenticationContextProvider;
+
+    @Inject
+    private CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
 
     @Override
     public CloudCredentialStatus verify(AuthenticatedContext authenticatedContext) {
@@ -90,7 +98,8 @@ public class AzureCredentialConnector implements CredentialConnector {
                 AzureEnvironment.AZURE);
 
         String replyUrl = appCreationCommand.getRedirectURL(String.valueOf(cloudContext.getWorkspaceId()));
-        CbDelegatedTokenCredentials creds = new CbDelegatedTokenCredentials(applicationCredentials, replyUrl);
+        CbDelegatedTokenCredentials creds = new CbDelegatedTokenCredentials(applicationCredentials, replyUrl, authenticationContextProvider,
+                cbRefreshTokenClientProvider);
 
         String state = UUID.randomUUID().toString();
         parameters.put("appLoginUrl", creds.generateAuthenticationUrl(state));

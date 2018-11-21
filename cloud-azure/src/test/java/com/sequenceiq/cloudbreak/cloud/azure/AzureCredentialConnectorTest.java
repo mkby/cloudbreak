@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.google.common.collect.Maps;
+import com.sequenceiq.cloudbreak.cloud.azure.client.CBRefreshTokenClientProvider;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.credential.CredentialNotifier;
 import com.sequenceiq.cloudbreak.cloud.credential.CredentialSender;
@@ -46,6 +47,9 @@ public class AzureCredentialConnectorTest {
 
     @Mock
     private AzureCredentialAppCreationCommand appCreationCommand;
+
+    @Mock
+    private CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
 
     @Before
     public void setUp() {

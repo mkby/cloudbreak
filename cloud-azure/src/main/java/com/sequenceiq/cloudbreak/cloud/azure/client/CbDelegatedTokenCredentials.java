@@ -35,12 +35,16 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
 
     private String clientSecret;
 
+    private AuthenticationContextProvider authenticationContextProvider;
+
     public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl, Map<String, AuthenticationResult> tokens,
-            String clientSecret) {
+            String clientSecret, AuthenticationContextProvider authenticationContextProvider, CBRefreshTokenClientProvider cbRefreshTokenClientProvider) {
         super(applicationCredentials.environment(), applicationCredentials.domain());
+        this.authenticationContextProvider = authenticationContextProvider;
         this.tokens = new ConcurrentHashMap<>(tokens);
         this.redirectUrl = redirectUrl;
-        this.cbRefreshTokenClient = new CBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
+        this.cbRefreshTokenClient = cbRefreshTokenClientProvider.getCBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(),
+                proxy());
         this.clientSecret = clientSecret;
     }
 
@@ -50,12 +54,15 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
      * @param applicationCredentials the credentials representing a service principal
      * @param redirectUrl the URL to redirect to after authentication in Active Directory
      */
-    public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl) {
+    public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl,
+                    AuthenticationContextProvider authenticationContextProvider, CBRefreshTokenClientProvider cbRefreshTokenClientProvider) {
         super(applicationCredentials.environment(), applicationCredentials.domain());
+        this.authenticationContextProvider = authenticationContextProvider;
         this.applicationCredentials = applicationCredentials;
         this.tokens = new ConcurrentHashMap<>();
         this.redirectUrl = redirectUrl;
-        this.cbRefreshTokenClient = new CBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
+        this.cbRefreshTokenClient = cbRefreshTokenClientProvider.getCBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(),
+                proxy());
     }
 
     /**
@@ -65,12 +72,15 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
      * @param redirectUrl the URL to redirect to after authentication in Active Directory
      * @param authorizationCode the oauth2 authorization code
      */
-    public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl, String authorizationCode, String clientSecret) {
+    public CbDelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl, String authorizationCode, String clientSecret,
+                    AuthenticationContextProvider authenticationContextProvider, CBRefreshTokenClientProvider cbRefreshTokenClientProvider) {
         super(applicationCredentials.environment(), applicationCredentials.domain());
+        this.authenticationContextProvider = authenticationContextProvider;
         this.tokens = new ConcurrentHashMap<>();
         this.redirectUrl = redirectUrl;
         this.authorizationCode = authorizationCode;
-        this.cbRefreshTokenClient = new CBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
+        this.cbRefreshTokenClient = cbRefreshTokenClientProvider.getCBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(),
+                proxy());
         this.clientSecret = clientSecret;
         this.applicationCredentials = applicationCredentials;
     }
@@ -162,16 +172,16 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
         checkPrerequisitesForNewAccessToken();
         String authorityUrl = environment().activeDirectoryEndpoint() + domain();
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        AuthenticationContext context = new AuthenticationContext(authorityUrl, false, executor);
+        AuthenticationContext context = authenticationContextProvider.getAuthenticationContext(authorityUrl, false, executor);
         if (proxy() != null) {
             context.setProxy(proxy());
         }
         try {
-            if (this.clientSecret != null) {
+            if (clientSecret != null) {
                 return context.acquireTokenByAuthorizationCode(
                         authorizationCode,
                         new URI(redirectUrl),
-                        new ClientCredential(applicationCredentials.clientId(), this.clientSecret),
+                        new ClientCredential(applicationCredentials.clientId(), clientSecret),
                         resource, null).get();
             }
             throw new AuthenticationException("Please provide either a non-null secret.");

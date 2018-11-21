@@ -56,6 +56,9 @@ public class AzureClientCredentialsTest {
     @Mock
     private CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
 
+    @Mock
+    private AuthenticationContextProvider authenticationContextProvider;
+
     private AuthenticationResult authenticationResult;
 
     @Before
@@ -75,7 +78,8 @@ public class AzureClientCredentialsTest {
     public void testGetRefreshTokenWhenCredentialFlowIsNotCodeGrantFlowThenEmptyOptionalReturns() {
         when(credentialView.getCodeGrantFlow()).thenReturn(false);
 
-        Optional<String> result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider).getRefreshToken();
+        Optional<String> result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider, authenticationContextProvider)
+                .getRefreshToken();
 
         assertFalse(result.isPresent());
     }
@@ -85,7 +89,8 @@ public class AzureClientCredentialsTest {
         when(credentialView.getRefreshToken()).thenReturn(REFRESH_TOKEN);
         when(cbRefreshTokenClient.refreshToken(anyString(), anyString(), anyString(), anyString(), anyString(), anyBoolean())).thenReturn(authenticationResult);
 
-        Optional<String> result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider).getRefreshToken();
+        Optional<String> result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider, authenticationContextProvider)
+                .getRefreshToken();
 
         assertTrue(result.isPresent());
         assertEquals(REFRESH_TOKEN, result.get());
@@ -97,7 +102,8 @@ public class AzureClientCredentialsTest {
         when(credentialView.getAppReplyUrl()).thenReturn("replyUrl");
         when(credentialView.getAuthorizationCode()).thenReturn("someAuthCode");
 
-        Optional<String> result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider).getRefreshToken();
+        Optional<String> result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider, authenticationContextProvider)
+                .getRefreshToken();
 
         assertFalse(result.isPresent());
     }
@@ -110,7 +116,7 @@ public class AzureClientCredentialsTest {
         thrown.expect(CloudConnectorException.class);
         thrown.expectMessage(String.format("New token couldn't be obtain with refresh token for credential: %s", CREDENTIAL_NAME));
 
-        new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider);
+        new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider, authenticationContextProvider);
     }
 
     @Test
@@ -118,7 +124,7 @@ public class AzureClientCredentialsTest {
         when(credentialView.getRefreshToken()).thenReturn(REFRESH_TOKEN);
         when(cbRefreshTokenClient.refreshToken(anyString(), anyString(), anyString(), anyString(), anyString(), anyBoolean())).thenReturn(authenticationResult);
 
-        Azure result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider).getAzure();
+        Azure result = new AzureClientCredentials(credentialView, LOG_LEVEL, cbRefreshTokenClientProvider, authenticationContextProvider).getAzure();
 
         assertNotNull(result);
         assertEquals(SUBSCRIPTION_ID, result.subscriptionId());

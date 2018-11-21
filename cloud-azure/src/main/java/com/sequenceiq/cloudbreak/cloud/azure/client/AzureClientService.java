@@ -20,6 +20,9 @@ public class AzureClientService {
     @Inject
     private CBRefreshTokenClientProvider cbRefreshTokenClientProvider;
 
+    @Inject
+    private AuthenticationContextProvider authenticationContextProvider;
+
     public AuthenticatedContext createAuthenticatedContext(CloudContext cloudContext, CloudCredential cloudCredential) {
         AuthenticatedContext authenticatedContext = new AuthenticatedContext(cloudContext, cloudCredential);
         AzureClient azureClient = getClient(cloudCredential);
@@ -29,7 +32,8 @@ public class AzureClientService {
 
     public AzureClient getClient(CloudCredential cloudCredential) {
         AzureCredentialView azureCredentialView = new AzureCredentialView(cloudCredential);
-        AzureClientCredentials azureClientCredentials = new AzureClientCredentials(azureCredentialView, logLevel, cbRefreshTokenClientProvider);
+        AzureClientCredentials azureClientCredentials = new AzureClientCredentials(azureCredentialView, logLevel, cbRefreshTokenClientProvider,
+                authenticationContextProvider);
         return new AzureClient(azureClientCredentials);
     }
 }

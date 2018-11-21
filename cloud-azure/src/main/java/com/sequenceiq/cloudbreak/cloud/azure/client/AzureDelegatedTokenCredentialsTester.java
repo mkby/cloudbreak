@@ -44,7 +44,13 @@ public class AzureDelegatedTokenCredentialsTester {
 
         Map<String, AuthenticationResult> tokens = Map.of(resource, authenticationResult);
         ApplicationTokenCredentials applicationCredentials = new ApplicationTokenCredentials(clientId, tenantId, clientSecret, azureEnv);
-        AzureTokenCredentials creds = new CbDelegatedTokenCredentials(applicationCredentials, resource, tokens, clientSecret)
+        AzureTokenCredentials creds = new CbDelegatedTokenCredentials(
+                applicationCredentials,
+                resource,
+                tokens,
+                clientSecret,
+                new AuthenticationContextProvider(),
+                new CBRefreshTokenClientProvider())
                 .withDefaultSubscriptionId(subscriptionId);
 
 

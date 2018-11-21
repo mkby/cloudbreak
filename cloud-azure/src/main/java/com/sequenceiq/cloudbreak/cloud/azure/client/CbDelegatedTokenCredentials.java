@@ -3,11 +3,13 @@ package com.sequenceiq.cloudbreak.cloud.azure.client;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -157,9 +159,7 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
     }
 
     AuthenticationResult acquireNewAccessToken(String resource) throws IOException {
-        if (authorizationCode == null) {
-            throw new IllegalArgumentException("You must acquire an authorization code by redirecting to the authentication URL");
-        }
+        checkPrerequisitesForNewAccessToken();
         String authorityUrl = environment().activeDirectoryEndpoint() + domain();
         ExecutorService executor = Executors.newSingleThreadExecutor();
         AuthenticationContext context = new AuthenticationContext(authorityUrl, false, executor);
@@ -175,7 +175,7 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
                         resource, null).get();
             }
             throw new AuthenticationException("Please provide either a non-null secret.");
-        } catch (Exception e) {
+        } catch (URISyntaxException | InterruptedException | ExecutionException e) {
             throw new IOException(e.getMessage(), e);
         } finally {
             executor.shutdown();
@@ -194,25 +194,13 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
         }
     }
 
-    /**
-     * Specifies the method that should be used to send the resulting token back to your app.
-     */
-    public enum ResponseMode {
-
-        /**
-         * the token is sent as a query parameter.
-         */
-        QUERY("query"),
-
-        /**
-         * the token is sent as part of a form data.
-         */
-        FORM_DATA("form_data");
-
-        private String value;
-
-        ResponseMode(String value) {
-            this.value = value;
+    private void checkPrerequisitesForNewAccessToken() {
+        if (authorizationCode == null) {
+            throw new IllegalArgumentException("You must acquire an authorization code by redirecting to the authentication URL");
+        }
+        if (applicationCredentials == null) {
+            throw new IllegalArgumentException("You must provide a valid Application token credential");
         }
     }
+
 }

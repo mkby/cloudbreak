@@ -46,6 +46,7 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
         this.cbRefreshTokenClient = cbRefreshTokenClientProvider.getCBRefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(),
                 proxy());
         this.clientSecret = clientSecret;
+        this.applicationCredentials = applicationCredentials;
     }
 
     /**
@@ -169,7 +170,9 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
     }
 
     AuthenticationResult acquireNewAccessToken(String resource) throws IOException {
-        checkPrerequisitesForNewAccessToken();
+        if (authorizationCode == null) {
+            throw new IllegalArgumentException("You must acquire an authorization code by redirecting to the authentication URL");
+        }
         String authorityUrl = environment().activeDirectoryEndpoint() + domain();
         ExecutorService executor = Executors.newSingleThreadExecutor();
         AuthenticationContext context = authenticationContextProvider.getAuthenticationContext(authorityUrl, false, executor);
@@ -201,15 +204,6 @@ public class CbDelegatedTokenCredentials extends AzureTokenCredentials {
             throw new AuthenticationException("Could not obtain refresh token.", e);
         } finally {
             executor.shutdown();
-        }
-    }
-
-    private void checkPrerequisitesForNewAccessToken() {
-        if (authorizationCode == null) {
-            throw new IllegalArgumentException("You must acquire an authorization code by redirecting to the authentication URL");
-        }
-        if (applicationCredentials == null) {
-            throw new IllegalArgumentException("You must provide a valid Application token credential");
         }
     }
 

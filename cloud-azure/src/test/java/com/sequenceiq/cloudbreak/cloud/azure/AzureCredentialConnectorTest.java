@@ -3,6 +3,7 @@ package com.sequenceiq.cloudbreak.cloud.azure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
+import org.apache.commons.codec.binary.Base64;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -18,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.google.common.collect.Maps;
+import com.sequenceiq.cloudbreak.api.model.v3.credential.CredentialPrerequisites;
 import com.sequenceiq.cloudbreak.cloud.azure.client.CBRefreshTokenClientProvider;
 import com.sequenceiq.cloudbreak.cloud.context.CloudContext;
 import com.sequenceiq.cloudbreak.cloud.credential.CredentialNotifier;
@@ -31,7 +34,9 @@ public class AzureCredentialConnectorTest {
 
     private static final Long WORKSPACE_ID = 1L;
 
-    private static final CloudContext TEST_CLOUD_CONTEXT = new CloudContext(1L, "test", "test", USER_ID, WORKSPACE_ID);
+    private static final String PLATFORM = "AWS";
+
+    private static final CloudContext TEST_CLOUD_CONTEXT = new CloudContext(1L, "test", PLATFORM, USER_ID, WORKSPACE_ID);
 
     @InjectMocks
     private AzureCredentialConnector underTest;
@@ -54,6 +59,27 @@ public class AzureCredentialConnectorTest {
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    public void testGetPrerequisitesReturnsTheExpectedValue() {
+        String expected = "someAppCreationCommandValue";
+        when(appCreationCommand.generate()).thenReturn(expected);
+
+        CredentialPrerequisites result = underTest.getPrerequisites(TEST_CLOUD_CONTEXT, "2");
+
+        assertEquals(PLATFORM, result.getCloudPlatform());
+        assertEquals(expected, new String(Base64.decodeBase64(result.getAzure().getAppCreationCommand())));
+    }
+
+    @Test
+    public void testGetPrerequisitesAwsIsNotImplemented() {
+        String expected = "someAppCreationCommandValue";
+        when(appCreationCommand.generate()).thenReturn(expected);
+
+        CredentialPrerequisites result = underTest.getPrerequisites(TEST_CLOUD_CONTEXT, "2");
+
+        assertNull(result.getAws());
     }
 
     @Test

@@ -27,6 +27,10 @@ public class AzureCredentialAppCreationCommand {
 
     private static final String CB_AZ_APP_REDIRECT_URI_PATTERN = "api/v3/%s/credentials/codegrantflow/authorization/azure";
 
+    private static final String GENERATE_EXCEPTION_MESSAGE_FORMAT = "Failed to process the Azure AD App creation template from path: '%s'";
+
+    private static final String ENCODING = "UTF-8";
+
     private static final String CB_AZ_APP_REPLY_URI = "api/v3/*";
 
     private static final String DELIMITER = "/";
@@ -45,29 +49,29 @@ public class AzureCredentialAppCreationCommand {
 
     public String generate() {
         try {
-            Template template = freemarkerConfiguration.getTemplate(appCreationCommandTemplatePath, "UTF-8");
+            Template template = freemarkerConfiguration.getTemplate(appCreationCommandTemplatePath, ENCODING);
             Map<String, Object> model = buildModel();
             return processTemplateIntoString(template, model);
         } catch (IOException | TemplateException e) {
-            String message = String.format("Failed to process the Azure AD App creation template from path: '%s'", appCreationCommandTemplatePath);
+            String message = String.format(GENERATE_EXCEPTION_MESSAGE_FORMAT, appCreationCommandTemplatePath);
             throw new CloudConnectorException(message, e);
         }
     }
 
     public String generateJSON(String appSecret) {
         try {
-            Template template = freemarkerConfiguration.getTemplate(appCreationJSONTemplatePath, "UTF-8");
+            Template template = freemarkerConfiguration.getTemplate(appCreationJSONTemplatePath, ENCODING);
             Map<String, Object> model = buildModel();
             model.put("appSecret", appSecret);
             model.put("keyId", UUID.randomUUID().toString());
             return processTemplateIntoString(template, model);
         } catch (IOException | TemplateException e) {
-            String message = String.format("Failed to process the Azure AD App creation template from path: '%s'", appCreationJSONTemplatePath);
+            String message = String.format(GENERATE_EXCEPTION_MESSAGE_FORMAT, appCreationJSONTemplatePath);
             throw new CloudConnectorException(message, e);
         }
     }
 
-    public String getRedirectURL(String workspaceId) {
+    String getRedirectURL(String workspaceId) {
         String cbAzAppAuthUri = String.format(CB_AZ_APP_REDIRECT_URI_PATTERN, workspaceId);
         String replyUrl = deploymentAddress.endsWith(DELIMITER) ? deploymentAddress : deploymentAddress.concat(DELIMITER);
         return replyUrl.concat(cbAzAppAuthUri);

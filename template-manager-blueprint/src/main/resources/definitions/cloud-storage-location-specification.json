@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "propertyName": "yarn.nodemanager.remote-app-log-dir",
+      "propertyFile": "yarn-site",
+      "description": "This is the directory where aggregated application logs should be stored by YARN NodeManager",
+      "defaultPath": "{{{ defaultPath }}}/yarn-app-logs/{{{ clusterName }}}",
+      "propertyDisplayName": "YARN Application Logs",
+      "relatedService": "NODEMANAGER",
+      "requiredForAttachedCluster": true,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "foo.bar",
+      "propertyFile": "yarn-site",
+      "description": "Dummy description",
+      "defaultPath": "{{{ defaultPath }}}/blah/{{{ clusterName }}}",
+      "propertyDisplayName": "Dummy Display Name",
+      "relatedService": "INFRA_SOLR",
+      "requiredForAttachedCluster": true,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
       "propertyName": "hive.metastore.warehouse.dir",
       "propertyFile": "hive-site",
       "description": "Hive stores the table data for managed tables in the Hive warehouse directory",

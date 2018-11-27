@@ -12,10 +12,12 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponse;
+import com.sequenceiq.cloudbreak.api.model.KerberosResponseView;
+import com.sequenceiq.cloudbreak.api.model.kdc.KdcConfigCreateRequest;
 import com.sequenceiq.cloudbreak.doc.ContentType;
 import com.sequenceiq.cloudbreak.doc.ControllerDescription;
 import com.sequenceiq.cloudbreak.doc.Notes;
@@ -34,7 +36,8 @@ public interface KdcV3Endpoint {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = OperationDescriptions.KdcOpDescription.LIST_BY_WORKSPACE, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
             nickname = "listKdcByWorkspace")
-    Set<KerberosResponse> listByWorkspace(@PathParam("workspaceId") Long workspaceId);
+    Set<KerberosResponseView> listByWorkspace(@PathParam("workspaceId") Long workspaceId, @QueryParam("environment") String environment,
+            @QueryParam("attachGlobal") Boolean attachGlobal);
 
     @GET
     @Path("{name}")
@@ -48,7 +51,7 @@ public interface KdcV3Endpoint {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = OperationDescriptions.KdcOpDescription.CREATE_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
             nickname = "createKdcInWorkspace")
-    KerberosResponse createInWorkspace(@PathParam("workspaceId") Long workspaceId, @Valid KerberosRequest request);
+    KerberosResponse createInWorkspace(@PathParam("workspaceId") Long workspaceId, @Valid KdcConfigCreateRequest request);
 
     @DELETE
     @Path("{name}")

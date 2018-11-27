@@ -13,8 +13,9 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.stereotype.Controller;
 
 import com.sequenceiq.cloudbreak.api.endpoint.v3.KdcV3Endpoint;
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponse;
+import com.sequenceiq.cloudbreak.api.model.KerberosResponseView;
+import com.sequenceiq.cloudbreak.api.model.kdc.KdcConfigCreateRequest;
 import com.sequenceiq.cloudbreak.domain.KerberosConfig;
 import com.sequenceiq.cloudbreak.service.kdc.KdcService;
 import com.sequenceiq.cloudbreak.util.WorkspaceEntityType;
@@ -32,9 +33,9 @@ public class KdcV3Controller extends NotificationController implements KdcV3Endp
     private KdcService kdcService;
 
     @Override
-    public Set<KerberosResponse> listByWorkspace(Long workspaceId) {
-        return kdcService.findKdcConfigWithoutTest(workspaceId).stream()
-                .map(kdcConfig -> conversionService.convert(kdcConfig, KerberosResponse.class))
+    public Set<KerberosResponseView> listByWorkspace(Long workspaceId, String environment, Boolean attachGlobal) {
+        return kdcService.findKdcConfigWithoutCbManaged(workspaceId, environment, attachGlobal).stream()
+                .map(kdcConfig -> conversionService.convert(kdcConfig, KerberosResponseView.class))
                 .collect(Collectors.toSet());
     }
 
@@ -45,9 +46,9 @@ public class KdcV3Controller extends NotificationController implements KdcV3Endp
     }
 
     @Override
-    public KerberosResponse createInWorkspace(Long workspaceId, @Valid KerberosRequest request) {
+    public KerberosResponse createInWorkspace(Long workspaceId, @Valid KdcConfigCreateRequest request) {
         KerberosConfig newKdcConfig = conversionService.convert(request, KerberosConfig.class);
-        KerberosConfig createdKdcConfig = kdcService.createForLoggedInUser(newKdcConfig, workspaceId);
+        KerberosConfig createdKdcConfig = kdcService.createInEnvironment(newKdcConfig, request.getEnvironments(), workspaceId);
         return conversionService.convert(createdKdcConfig, KerberosResponse.class);
     }
 

@@ -13,9 +13,9 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.stereotype.Controller;
 
 import com.sequenceiq.cloudbreak.api.endpoint.v3.KdcV3Endpoint;
+import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponse;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponseView;
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcConfigCreateRequest;
 import com.sequenceiq.cloudbreak.domain.KerberosConfig;
 import com.sequenceiq.cloudbreak.service.kdc.KdcService;
 import com.sequenceiq.cloudbreak.util.WorkspaceEntityType;
@@ -34,8 +34,9 @@ public class KdcV3Controller extends NotificationController implements KdcV3Endp
 
     @Override
     public Set<KerberosResponseView> listByWorkspace(Long workspaceId, String environment, Boolean attachGlobal) {
-        return kdcService.findKdcConfigWithoutCbManaged(workspaceId, environment, attachGlobal).stream()
-                .map(kdcConfig -> conversionService.convert(kdcConfig, KerberosResponseView.class))
+        return kdcService.findAllInWorkspaceAndEnvironment(workspaceId, environment, attachGlobal)
+                .stream()
+                .map(kerberosConfig -> conversionService.convert(kerberosConfig, KerberosResponseView.class))
                 .collect(Collectors.toSet());
     }
 
@@ -45,10 +46,9 @@ public class KdcV3Controller extends NotificationController implements KdcV3Endp
         return conversionService.convert(kerberosConfig, KerberosResponse.class);
     }
 
-    @Override
-    public KerberosResponse createInWorkspace(Long workspaceId, @Valid KdcConfigCreateRequest request) {
+    public KerberosResponse createInWorkspace(Long workspaceId, @Valid KerberosRequest request) {
         KerberosConfig newKdcConfig = conversionService.convert(request, KerberosConfig.class);
-        KerberosConfig createdKdcConfig = kdcService.createInEnvironment(newKdcConfig, request.getEnvironments(), workspaceId);
+        KerberosConfig createdKdcConfig = kdcService.createInEnvironment(newKdcConfig, null, workspaceId);
         return conversionService.convert(createdKdcConfig, KerberosResponse.class);
     }
 
@@ -69,4 +69,5 @@ public class KdcV3Controller extends NotificationController implements KdcV3Endp
         KerberosConfig detached = kdcService.detachFromEnvironments(name, environmentNames, workspaceId);
         return conversionService.convert(detached, KerberosResponse.class);
     }
+
 }

@@ -113,6 +113,11 @@ public class KerberosConfig implements ProvisionEntity, EnvironmentAwareResource
     }
 
     @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
     public void setWorkspace(Workspace workspace) {
         this.workspace = workspace;
     }
@@ -292,7 +297,4 @@ public class KerberosConfig implements ProvisionEntity, EnvironmentAwareResource
         this.name = name;
     }
 
-    public String getName() {
-        return name;
-    }
 }

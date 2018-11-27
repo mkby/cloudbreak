@@ -11,12 +11,52 @@
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
     },
     {
-      "propertyName": "foo.bar",
-      "propertyFile": "yarn-site",
-      "description": "Dummy description",
-      "defaultPath": "{{{ defaultPath }}}/blah/{{{ clusterName }}}",
-      "propertyDisplayName": "Dummy Display Name",
-      "relatedService": "INFRA_SOLR",
+      "propertyName": "hbase.rootdir",
+      "propertyFile": "yarn-hbase-site",
+      "description": "The directory shared by region servers and into which YARN App Timeline Server HBase persists",
+      "defaultPath": "{{{ defaultPath }}}/yarn-hbase/data",
+      "propertyDisplayName": "YARN HBase Root Directory",
+      "relatedService": "APP_TIMELINE_SERVER",
+      "requiredForAttachedCluster": false,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "spark.eventLog.dir",
+      "propertyFile": "spark2-defaults",
+      "description": "The directory in which Spark events are logged",
+      "defaultPath": "{{{ defaultPath }}}/spark2-history",
+      "propertyDisplayName": "Spark Event Logs",
+      "relatedService": "SPARK_CLIENT",
+      "requiredForAttachedCluster": true,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "spark.history.fs.logDirectory",
+      "propertyFile": "spark2-defaults",
+      "description": "The directory containing application event logs to load into Spark History Server",
+      "defaultPath": "{{{ defaultPath }}}/spark2-history",
+      "propertyDisplayName": "Spark History Log Source",
+      "relatedService": "SPARK2_JOBHISTORYSERVER",
+      "requiredForAttachedCluster": false,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "spark.sql.warehouse.dir",
+      "propertyFile": "spark2-defaults",
+      "description": "Spark SQL stores the table data for managed tables in the warehouse directory",
+      "defaultPath": "{{{ defaultPath }}}/apps/spark/warehouse",
+      "propertyDisplayName": "Spark SQL Warehouse Directory",
+      "relatedService": "SPARK_CLIENT",
+      "requiredForAttachedCluster": true,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "hbase.rootdir",
+      "propertyFile": "ams-hbase-site",
+      "description": "The directory shared by region servers and into which Ambari Metrics System HBase persists",
+      "defaultPath": "{{{ defaultPath }}}/amshbase",
+      "propertyDisplayName": "Ambari Metrics System HBase Root Directory",
+      "relatedService": "METRICS_COLLECTOR",
       "requiredForAttachedCluster": true,
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
     },

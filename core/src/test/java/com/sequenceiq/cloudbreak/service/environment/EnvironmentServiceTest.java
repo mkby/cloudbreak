@@ -61,6 +61,7 @@ import com.sequenceiq.cloudbreak.converter.RDSConfigToRDSConfigResponseConverter
 import com.sequenceiq.cloudbreak.converter.environment.EnvironmentToDetailedEnvironmentResponseConverter;
 import com.sequenceiq.cloudbreak.converter.environment.RegionConverter;
 import com.sequenceiq.cloudbreak.domain.Credential;
+import com.sequenceiq.cloudbreak.domain.KerberosConfig;
 import com.sequenceiq.cloudbreak.domain.LdapConfig;
 import com.sequenceiq.cloudbreak.domain.ProxyConfig;
 import com.sequenceiq.cloudbreak.domain.RDSConfig;
@@ -74,6 +75,7 @@ import com.sequenceiq.cloudbreak.service.KubernetesConfigService;
 import com.sequenceiq.cloudbreak.service.RestRequestThreadLocalService;
 import com.sequenceiq.cloudbreak.service.TransactionService;
 import com.sequenceiq.cloudbreak.service.TransactionService.TransactionExecutionException;
+import com.sequenceiq.cloudbreak.service.kdc.KdcService;
 import com.sequenceiq.cloudbreak.service.ldapconfig.LdapConfigService;
 import com.sequenceiq.cloudbreak.service.platform.PlatformParameterService;
 import com.sequenceiq.cloudbreak.service.proxy.ProxyConfigService;
@@ -117,6 +119,9 @@ public class EnvironmentServiceTest {
 
     @Mock
     private ProxyConfigService proxyConfigService;
+
+    @Mock
+    private KdcService kdcService;
 
     @Mock
     private EnvironmentCredentialOperationService environmentCredentialOperationService;
@@ -175,6 +180,7 @@ public class EnvironmentServiceTest {
         when(ldapConfigService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
         when(rdsConfigService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
         when(proxyConfigService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
+        when(kdcService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
         when(environmentCreationValidator.validate(any(), any(), anyBoolean())).thenReturn(ValidationResult.builder().build());
         when(workspaceService.get(anyLong(), any())).thenReturn(workspace);
         when(restRequestThreadLocalService.getCloudbreakUser()).thenReturn(new CloudbreakUser("", "", "", ""));
@@ -546,6 +552,16 @@ public class EnvironmentServiceTest {
         rds2.setName(rdsName2);
         rds2.setDatabaseEngine(DatabaseVendor.POSTGRES);
 
+        KerberosConfig kdc1 = new KerberosConfig();
+        kdc1.setId(1L);
+        String kdcName1 = "kdc1";
+        kdc1.setName(kdcName1);
+
+        KerberosConfig kdc2 = new KerberosConfig();
+        kdc2.setId(2L);
+        String kdcName2 = "kdc1";
+        kdc2.setName(kdcName2);
+
         Cluster cluster1 = new Cluster();
         cluster1.setId(1L);
         String clusterName1 = "cluster1";
@@ -559,17 +575,20 @@ public class EnvironmentServiceTest {
         environment.setLdapConfigs(Sets.newHashSet(ldap1, ldap2, ldap3));
         environment.setProxyConfigs(Sets.newHashSet(proxy1, proxy2));
         environment.setRdsConfigs(Sets.newHashSet(rds1, rds2));
+        environment.setKdcConfigs(Sets.newHashSet(kdc1, kdc2));
 
         EnvironmentDetachRequest request = new EnvironmentDetachRequest();
         request.setLdapConfigs(Sets.newHashSet(ldapName1, ldapName2));
         request.setProxyConfigs(Sets.newHashSet(proxyName1));
         request.setRdsConfigs(Sets.newHashSet(rdsName1));
+        request.setKdcConfigs(Sets.newHashSet(kdcName1));
 
         when(environmentRepository.findByNameAndWorkspaceId(ENVIRONMENT_NAME, WORKSPACE_ID)).thenReturn(environment);
         when(ldapConfigService.getClustersUsingResourceInEnvironment(ldap1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
         when(ldapConfigService.getClustersUsingResourceInEnvironment(ldap2, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1, cluster2));
         when(proxyConfigService.getClustersUsingResourceInEnvironment(proxy1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
         when(rdsConfigService.getClustersUsingResourceInEnvironment(rds1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
+        when(kdcService.getClustersUsingResourceInEnvironment(kdc1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
 
         exceptionRule.expect(BadRequestException.class);
         exceptionRule.expectMessage(String.format("RDS config '%s' cannot be detached from environment 'EnvName' "
@@ -580,6 +599,8 @@ public class EnvironmentServiceTest {
                 + "because it is used by the following cluster(s): [%s]", ldapName1, clusterName1));
         exceptionRule.expectMessage(String.format("LDAP config '%s' cannot be detached from environment 'EnvName' "
                 + "because it is used by the following cluster(s): [%s, %s]", ldapName2, clusterName1, clusterName2));
+        exceptionRule.expectMessage(String.format("Kerberos Config '%s' cannot be detached from environment 'EnvName' "
+                + "because it is used by the following cluster(s): [%s]", kdcName1, clusterName1));
 
         environmentService.detachResources(ENVIRONMENT_NAME, request, WORKSPACE_ID);
     }

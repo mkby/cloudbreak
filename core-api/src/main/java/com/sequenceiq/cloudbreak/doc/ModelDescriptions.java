@@ -630,6 +630,7 @@ public class ModelDescriptions {
         public static final String LOCATION = "Location of the environment.";
         public static final String LONGITUDE = "Location longitude of the environment.";
         public static final String LATITUDE = "Location latitude of the environment.";
+        public static final String KDC_CONFIGS = "Name of KDC configs to be attached to the environment.";
     }
 
     public static class EnvironmentResponseModelDescription {
@@ -646,6 +647,7 @@ public class ModelDescriptions {
         public static final String WORKLOAD_CLUSTER_NAMES = "Names of the workload clusters created in the environment.";
         public static final String DATALAKE_CLUSTERS = "Datalake clusters created in the environment.";
         public static final String DATALAKE_CLUSTER_NAMES = "Names of the datalake clusters created in the environment.";
+        public static final String KDC_CONFIGS = "KDC configs in the environment.";
     }
 
     public static class SecretResponseModelDescription {

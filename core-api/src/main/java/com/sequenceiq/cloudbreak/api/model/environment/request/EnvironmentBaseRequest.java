@@ -23,6 +23,9 @@ public abstract class EnvironmentBaseRequest {
     @ApiModelProperty(EnvironmentRequestModelDescription.KUBERNETES_CONFIGS)
     private Set<String> kubernetesConfigs = new HashSet<>();
 
+    @ApiModelProperty(EnvironmentRequestModelDescription.KDC_CONFIGS)
+    private Set<String> kdcConfigs = new HashSet<>();
+
     public Set<String> getProxyConfigs() {
         return proxyConfigs;
     }
@@ -53,5 +56,13 @@ public abstract class EnvironmentBaseRequest {
 
     public void setKubernetesConfigs(Set<String> kubernetesConfigs) {
         this.kubernetesConfigs = kubernetesConfigs;
+    }
+
+    public Set<String> getKdcConfigs() {
+        return kdcConfigs;
+    }
+
+    public void setKdcConfigs(Set<String> kdcConfigs) {
+        this.kdcConfigs = kdcConfigs;
     }
 }

@@ -4,7 +4,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
+import org.springframework.core.convert.ConversionService;
 import org.springframework.stereotype.Service;
 
 import com.sequenceiq.cloudbreak.authorization.WorkspaceResource;
@@ -26,6 +28,10 @@ public class KdcService extends AbstractEnvironmentAwareService<KerberosConfig> 
     @Inject
     private ClusterService clusterService;
 
+    @Inject
+    @Named("conversionService")
+    private ConversionService conversionService;
+
     @Override
     protected EnvironmentResourceRepository<KerberosConfig, Long> repository() {
         return kerberosConfigRepository;
@@ -33,7 +39,7 @@ public class KdcService extends AbstractEnvironmentAwareService<KerberosConfig> 
 
     @Override
     protected void prepareCreation(KerberosConfig resource) {
-        if (resource.getType().equals(KerberosType.CB_MANAGED)) {
+        if (KerberosType.CB_MANAGED.equals(resource.getType())) {
             throw new BadRequestException("Cannot create CB_MANAGED KDC config for environment");
         }
     }
@@ -53,8 +59,9 @@ public class KdcService extends AbstractEnvironmentAwareService<KerberosConfig> 
         return WorkspaceResource.KERBEROS_CONFIG;
     }
 
-    public Set<KerberosConfig> findKdcConfigWithoutTest(Long workspaceId) {
-        return kerberosConfigRepository.findAllByWorkspaceId(workspaceId).stream()
+    public Set<KerberosConfig> findKdcConfigWithoutCbManaged(Long workspaceId, String environment, Boolean attachGlobal) {
+        return super.findAllInWorkspaceAndEnvironment(workspaceId, environment, attachGlobal)
+                .stream()
                 .filter(kerberosConfig -> !kerberosConfig.getType().equals(KerberosType.CB_MANAGED))
                 .collect(Collectors.toSet());
     }

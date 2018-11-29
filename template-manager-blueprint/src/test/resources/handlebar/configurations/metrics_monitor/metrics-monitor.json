@@ -1,0 +1,10 @@
+{
+
+  "cluster-env": {
+    "properties": {
+      "metrics_collector_external_port": "6188",
+      "metrics_collector_external_hosts": "ambarifqdn"
+    }
+  }
+
+}

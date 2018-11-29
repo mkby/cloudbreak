@@ -7,7 +7,7 @@
       "defaultPath": "{{{ defaultPath }}}/yarn-app-logs/{{{ clusterName }}}",
       "propertyDisplayName": "YARN Application Logs",
       "relatedService": "NODEMANAGER",
-      "requiredForAttachedCluster": true,
+      "requiredForAttachedCluster": false,
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
     },
     {
@@ -27,7 +27,7 @@
       "defaultPath": "{{{ defaultPath }}}/spark2-history",
       "propertyDisplayName": "Spark Event Logs",
       "relatedService": "SPARK_CLIENT",
-      "requiredForAttachedCluster": true,
+      "requiredForAttachedCluster": false,
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
     },
     {
@@ -47,7 +47,7 @@
       "defaultPath": "{{{ defaultPath }}}/apps/spark/warehouse",
       "propertyDisplayName": "Spark SQL Warehouse Directory",
       "relatedService": "SPARK_CLIENT",
-      "requiredForAttachedCluster": true,
+      "requiredForAttachedCluster": false,
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
     },
     {
@@ -57,7 +57,7 @@
       "defaultPath": "{{{ defaultPath }}}/amshbase",
       "propertyDisplayName": "Ambari Metrics System HBase Root Directory",
       "relatedService": "METRICS_COLLECTOR",
-      "requiredForAttachedCluster": true,
+      "requiredForAttachedCluster": false,
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
     },
     {

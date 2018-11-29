@@ -54,7 +54,7 @@
       "propertyName": "hbase.rootdir",
       "propertyFile": "ams-hbase-site",
       "description": "The directory shared by region servers and into which Ambari Metrics System HBase persists",
-      "defaultPath": "{{{ defaultPath }}}/amshbase",
+      "defaultPath": "{{{ defaultPath }}}/ams-hbase/data",
       "propertyDisplayName": "Ambari Metrics System HBase Root Directory",
       "relatedService": "METRICS_COLLECTOR",
       "requiredForAttachedCluster": false,

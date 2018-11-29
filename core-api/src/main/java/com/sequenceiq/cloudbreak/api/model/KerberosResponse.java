@@ -11,7 +11,7 @@ import io.swagger.annotations.ApiModelProperty;
 @ApiModel
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
-public class KerberosResponse extends KerberosBase {
+public class KerberosResponse extends KerberosResponseBase {
 
     @ApiModelProperty(StackModelDescription.KERBEROS_MASTER_KEY)
     private SecretResponse masterKey;

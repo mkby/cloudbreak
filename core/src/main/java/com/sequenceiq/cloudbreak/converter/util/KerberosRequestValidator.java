@@ -4,17 +4,17 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcConfigCreateRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosRequest;
 
 @Component
-public class KdcConfigCreateValidator {
+public class KerberosRequestValidator {
 
-    public boolean isKdcConfigCreateRequestProperlyCreated(KdcConfigCreateRequest req) {
+    public boolean isKerberosRequestProperlyCreated(KerberosRequest req) {
         boolean result;
         if (req == null) {
             result = false;
         } else {
-            result = List.of(req.getExistingAd() != null, req.getExistingFreeIpa() != null, req.getExistingMit() != null, req.getCustom() != null)
+            result = List.of(req.getActiveDirectory() != null, req.getFreeIpa() != null, req.getMit() != null, req.getCustom() != null)
                     .stream()
                     .filter(fieldIsNotNull -> fieldIsNotNull)
                     .count() == 1;

@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 @ApiModel
-public class KdcExistingAd extends KdcBase {
+public class KerberosAdRequest extends KerberosRequestTypeBase {
 
     @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_KDC_URL)
     private String url;
@@ -30,7 +30,7 @@ public class KdcExistingAd extends KdcBase {
     @ApiModelProperty(hidden = true)
     @Override
     public KerberosType getType() {
-        return KerberosType.EXISTING_AD;
+        return KerberosType.ACTIVE_DIRECTORY;
     }
 
     public String getUrl() {

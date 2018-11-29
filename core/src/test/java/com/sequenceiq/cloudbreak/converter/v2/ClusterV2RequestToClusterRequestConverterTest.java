@@ -21,7 +21,6 @@ import com.sequenceiq.cloudbreak.api.model.BlueprintInputJson;
 import com.sequenceiq.cloudbreak.api.model.ConfigStrategy;
 import com.sequenceiq.cloudbreak.api.model.ConnectedClusterRequest;
 import com.sequenceiq.cloudbreak.api.model.ExecutorType;
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
 import com.sequenceiq.cloudbreak.api.model.SharedServiceRequest;
 import com.sequenceiq.cloudbreak.api.model.stack.cluster.ClusterRequest;
 import com.sequenceiq.cloudbreak.api.model.stack.cluster.gateway.GatewayJson;
@@ -169,7 +168,7 @@ public class ClusterV2RequestToClusterRequestConverterTest {
         request.setConnectedCluster(new ConnectedClusterRequest());
         request.setEnableSecurity(true);
         request.setGateway(new GatewayJson());
-        request.setKerberos(new KerberosRequest());
+        request.setKerberosConfigName(null);
         request.setPassword("somePwd");
         request.setUserName("someUserName");
         request.setValidateBlueprint(true);

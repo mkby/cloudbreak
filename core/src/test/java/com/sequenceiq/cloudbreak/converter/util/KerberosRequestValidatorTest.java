@@ -8,35 +8,35 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcConfigCreateRequest;
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcCustom;
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcExistingAd;
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcExistingFreeIpa;
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcExistingMit;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosCustomRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosAdRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosFreeIpaRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosMitRequest;
 
 @RunWith(Parameterized.class)
-public class KdcConfigCreateValidatorTest {
+public class KerberosRequestValidatorTest {
 
-    private static final KdcExistingFreeIpa EXISTING_FREE_IPA = new KdcExistingFreeIpa();
+    private static final KerberosFreeIpaRequest EXISTING_FREE_IPA = new KerberosFreeIpaRequest();
 
-    private static final KdcExistingMit EXISTING_MIT = new KdcExistingMit();
+    private static final KerberosMitRequest EXISTING_MIT = new KerberosMitRequest();
 
-    private static final KdcExistingAd EXISTING_AD = new KdcExistingAd();
+    private static final KerberosAdRequest EXISTING_AD = new KerberosAdRequest();
 
-    private static final KdcCustom CUSTOM = new KdcCustom();
+    private static final KerberosCustomRequest CUSTOM = new KerberosCustomRequest();
 
-    private KdcConfigCreateValidator underTest;
+    private KerberosRequestValidator underTest;
 
-    private KdcConfigCreateRequest request;
+    private KerberosRequest request;
 
     private boolean expected;
 
-    public KdcConfigCreateValidatorTest(KdcConfigCreateRequest request, boolean expected) {
+    public KerberosRequestValidatorTest(KerberosRequest request, boolean expected) {
         this.request = request;
         this.expected = expected;
     }
 
-    @Parameterized.Parameters(name = "[{index}] Test KdcConfigCreateRequest: {0}")
+    @Parameterized.Parameters(name = "[{index}] Test KerberosRequest: {0}")
     public static Iterable<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 {null, false},
@@ -59,20 +59,20 @@ public class KdcConfigCreateValidatorTest {
 
     @Before
     public void setUp() {
-        underTest = new KdcConfigCreateValidator();
+        underTest = new KerberosRequestValidator();
     }
 
     @Test
     public void testAgainstDifferentInputs() {
-        Assert.assertEquals(expected, underTest.isKdcConfigCreateRequestProperlyCreated(request));
+        Assert.assertEquals(expected, underTest.isKerberosRequestProperlyCreated(request));
     }
 
-    private static KdcConfigCreateRequest createRequest(KdcExistingAd existingAd, KdcExistingFreeIpa existingFreeIpa, KdcExistingMit existingMit,
-            KdcCustom custom) {
-        KdcConfigCreateRequest request = new KdcConfigCreateRequest();
-        request.setExistingMit(existingMit);
-        request.setExistingFreeIpa(existingFreeIpa);
-        request.setExistingAd(existingAd);
+    private static KerberosRequest createRequest(KerberosAdRequest existingAd, KerberosFreeIpaRequest existingFreeIpa, KerberosMitRequest existingMit,
+            KerberosCustomRequest custom) {
+        KerberosRequest request = new KerberosRequest();
+        request.setMit(existingMit);
+        request.setFreeIpa(existingFreeIpa);
+        request.setActiveDirectory(existingAd);
         request.setCustom(custom);
         return request;
     }

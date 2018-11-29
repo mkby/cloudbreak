@@ -1210,8 +1210,8 @@ public class ClusterService {
         return clusterRepository.findByKdcConfig(kdcConfigId);
     }
 
-    public Set<Cluster> findAllClustersByKdcConfigInEnvironment(KerberosConfig kdcConfig, Long environmentId) {
-        return clusterRepository.findByKdcConfigAndEnvironment(kdcConfig.getId(), environmentId);
+    public Set<Cluster> findAllClustersByKerberosConfigInEnvironment(KerberosConfig kdcConfig, Long environmentId) {
+        return clusterRepository.findByKerberosConfigAndEnvironment(kdcConfig.getId(), environmentId);
     }
 
     public void updateAmbariRepoDetails(Long clusterId, AmbariStackDetailsJson ambariStackDetails) {

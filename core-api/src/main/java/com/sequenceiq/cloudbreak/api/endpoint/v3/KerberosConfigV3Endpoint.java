@@ -15,66 +15,64 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponse;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponseView;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosRequest;
 import com.sequenceiq.cloudbreak.doc.ContentType;
 import com.sequenceiq.cloudbreak.doc.ControllerDescription;
 import com.sequenceiq.cloudbreak.doc.Notes;
-import com.sequenceiq.cloudbreak.doc.OperationDescriptions;
+import com.sequenceiq.cloudbreak.doc.OperationDescriptions.KerberosOpDescription;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-@Path("/v3/{workspaceId}/kdc")
+@Path("/v3/{workspaceId}/kerberos")
 @Consumes(MediaType.APPLICATION_JSON)
-@Api(value = "/v3/{workspaceId}/kdc", description = ControllerDescription.KDC_V3_DESCRIPTION, protocols = "http,https")
-public interface KdcV3Endpoint {
+@Api(value = "/v3/{workspaceId}/kerberos", description = ControllerDescription.KERBEROS_CONFIG_V3_DESCRIPTION, protocols = "http,https")
+public interface KerberosConfigV3Endpoint {
 
     @GET
     @Path("")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = OperationDescriptions.KdcOpDescription.LIST_BY_WORKSPACE, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
-            nickname = "listKdcByWorkspace")
+    @ApiOperation(value = KerberosOpDescription.LIST_BY_WORKSPACE, produces = ContentType.JSON, notes = Notes.KERBEROS_CONFIG_NOTES,
+            nickname = "listKerberosConfigByWorkspace")
     Set<KerberosResponseView> listByWorkspace(@PathParam("workspaceId") Long workspaceId, @QueryParam("environment") String environment,
             @QueryParam("attachGlobal") Boolean attachGlobal);
 
     @GET
     @Path("{name}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = OperationDescriptions.KdcOpDescription.GET_BY_NAME_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
-            nickname = "getKdcInWorkspace")
+    @ApiOperation(value = KerberosOpDescription.GET_BY_NAME_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KERBEROS_CONFIG_NOTES,
+            nickname = "getKerberosConfigInWorkspace")
     KerberosResponse getByNameInWorkspace(@PathParam("workspaceId") Long workspaceId, @PathParam("name") String name);
 
     @POST
     @Path("")
-    @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = OperationDescriptions.KdcOpDescription.CREATE_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
-            nickname = "createKdcInWorkspace")
+    @ApiOperation(value = KerberosOpDescription.CREATE_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KERBEROS_CONFIG_NOTES,
+            nickname = "createKerberosConfigInWorkspace")
     KerberosResponse createInWorkspace(@PathParam("workspaceId") Long workspaceId, @Valid KerberosRequest request);
-
 
     @DELETE
     @Path("{name}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = OperationDescriptions.KdcOpDescription.DELETE_BY_NAME_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
-            nickname = "deleteKdcInWorkspace")
+    @ApiOperation(value = KerberosOpDescription.DELETE_BY_NAME_IN_WORKSPACE, produces = ContentType.JSON,
+            notes = Notes.KERBEROS_CONFIG_NOTES, nickname = "deleteKerberosConfigInWorkspace")
     KerberosResponse deleteInWorkspace(@PathParam("workspaceId") Long workspaceId,  @PathParam("name") String name);
 
     @PUT
     @Path("{name}/attach")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = OperationDescriptions.KdcOpDescription.ATTACH_TO_ENVIRONMENTS, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
-            nickname = "attachKdcToEnvironments")
+    @ApiOperation(value = KerberosOpDescription.ATTACH_TO_ENVIRONMENTS, produces = ContentType.JSON, notes = Notes.KERBEROS_CONFIG_NOTES,
+            nickname = "attachKerberosConfigToEnvironments")
     KerberosResponse attachToEnvironments(@PathParam("workspaceId") Long workspaceId, @PathParam("name") String name, @NotEmpty Set<String> environmentNames);
 
     @PUT
     @Path("{name}/detach")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = OperationDescriptions.KdcOpDescription.DETACH_FROM_ENVIRONMENTS, produces = ContentType.JSON, notes = Notes.KDC_NOTES,
-            nickname = "detachKdcFromEnvironments")
+    @ApiOperation(value = KerberosOpDescription.DETACH_FROM_ENVIRONMENTS, produces = ContentType.JSON, notes = Notes.KERBEROS_CONFIG_NOTES,
+            nickname = "detachKerberosConfigFromEnvironments")
     KerberosResponse detachFromEnvironments(@PathParam("workspaceId") Long workspaceId, @PathParam("name") String name,
             @NotEmpty Set<String> environmentNames);
 

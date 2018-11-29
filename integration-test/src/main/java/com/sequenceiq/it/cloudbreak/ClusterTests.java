@@ -1,5 +1,17 @@
 package com.sequenceiq.it.cloudbreak;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
 import com.sequenceiq.cloudbreak.api.model.BlueprintResponse;
 import com.sequenceiq.cloudbreak.api.model.imagecatalog.ImageResponse;
 import com.sequenceiq.cloudbreak.api.model.imagecatalog.ImagesResponse;
@@ -22,17 +34,6 @@ import com.sequenceiq.it.cloudbreak.newway.cloud.CloudProvider;
 import com.sequenceiq.it.cloudbreak.newway.cloud.CloudProviderHelper;
 import com.sequenceiq.it.cloudbreak.newway.cloud.HostGroupType;
 import com.sequenceiq.it.cloudbreak.newway.v3.StackV3Action;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class ClusterTests extends CloudbreakClusterTestConfiguration {
 
@@ -71,7 +72,6 @@ public class ClusterTests extends CloudbreakClusterTestConfiguration {
         if (enableKerberos) {
             KerberosEntity kerberos = KerberosEntity.request()
                     .withMasterKey(KerberosEntity.DEFAULT_MASTERKEY)
-                    .withAdmin(KerberosEntity.DEFAULT_ADMIN_USER)
                     .withPassword(KerberosEntity.DEFAULT_ADMIN_PASSWORD);
             given(kerberos);
         }
@@ -290,7 +290,6 @@ public class ClusterTests extends CloudbreakClusterTestConfiguration {
         String clusterName = getTestParameter().get("clusterName");
         KerberosEntity kerberos = KerberosEntity.request()
                 .withMasterKey(KerberosEntity.DEFAULT_MASTERKEY)
-                .withAdmin(KerberosEntity.DEFAULT_ADMIN_USER)
                 .withPassword(KerberosEntity.DEFAULT_ADMIN_PASSWORD);
         return new Object[][]{
                 {cloudProvider, clusterName, blueprint, imageOs, kerberos}

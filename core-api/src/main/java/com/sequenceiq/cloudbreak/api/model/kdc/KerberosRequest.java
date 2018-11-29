@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sequenceiq.cloudbreak.api.model.JsonEntity;
 import com.sequenceiq.cloudbreak.doc.ModelDescriptions;
-import com.sequenceiq.cloudbreak.validation.ValidKdcConfigCreateRequest;
+import com.sequenceiq.cloudbreak.validation.ValidKerberosRequest;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -17,24 +17,24 @@ import io.swagger.annotations.ApiModelProperty;
 @ApiModel
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@ValidKdcConfigCreateRequest
-public class KdcConfigCreateRequest implements JsonEntity {
+@ValidKerberosRequest
+public class KerberosRequest implements JsonEntity {
 
     @Valid
     @ApiModelProperty
-    private KdcExistingAd existingAd;
+    private KerberosAdRequest activeDirectory;
 
     @Valid
     @ApiModelProperty
-    private KdcExistingFreeIpa existingFreeIpa;
+    private KerberosFreeIpaRequest freeIpa;
 
     @Valid
     @ApiModelProperty
-    private KdcExistingMit existingMit;
+    private KerberosMitRequest mit;
 
     @Valid
     @ApiModelProperty
-    private KdcCustom custom;
+    private KerberosCustomRequest custom;
 
     @ApiModelProperty(ModelDescriptions.ENVIRONMENTS)
     private Set<String> environments = new HashSet<>();
@@ -47,35 +47,35 @@ public class KdcConfigCreateRequest implements JsonEntity {
         this.environments = environments;
     }
 
-    public KdcExistingAd getExistingAd() {
-        return existingAd;
+    public KerberosAdRequest getActiveDirectory() {
+        return activeDirectory;
     }
 
-    public void setExistingAd(KdcExistingAd existingAd) {
-        this.existingAd = existingAd;
+    public void setActiveDirectory(KerberosAdRequest activeDirectory) {
+        this.activeDirectory = activeDirectory;
     }
 
-    public KdcExistingFreeIpa getExistingFreeIpa() {
-        return existingFreeIpa;
+    public KerberosFreeIpaRequest getFreeIpa() {
+        return freeIpa;
     }
 
-    public void setExistingFreeIpa(KdcExistingFreeIpa existingFreeIpa) {
-        this.existingFreeIpa = existingFreeIpa;
+    public void setFreeIpa(KerberosFreeIpaRequest freeIpa) {
+        this.freeIpa = freeIpa;
     }
 
-    public KdcExistingMit getExistingMit() {
-        return existingMit;
+    public KerberosMitRequest getMit() {
+        return mit;
     }
 
-    public void setExistingMit(KdcExistingMit existingMit) {
-        this.existingMit = existingMit;
+    public void setMit(KerberosMitRequest mit) {
+        this.mit = mit;
     }
 
-    public KdcCustom getCustom() {
+    public KerberosCustomRequest getCustom() {
         return custom;
     }
 
-    public void setCustom(KdcCustom custom) {
+    public void setCustom(KerberosCustomRequest custom) {
         this.custom = custom;
     }
 }

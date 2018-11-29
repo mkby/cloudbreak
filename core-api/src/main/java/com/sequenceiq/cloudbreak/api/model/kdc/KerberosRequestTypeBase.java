@@ -14,7 +14,7 @@ import io.swagger.annotations.ApiModelProperty;
 
 @ApiModel
 @JsonIgnoreProperties(ignoreUnknown = true, value = "type")
-public abstract class KdcBase implements JsonEntity {
+public abstract class KerberosRequestTypeBase implements JsonEntity {
 
     @ApiModelProperty
     @NotNull
@@ -35,7 +35,19 @@ public abstract class KdcBase implements JsonEntity {
     @Size(max = 50, min = 5, message = "The length of the Kerberos password has to be in range of 5 to 50")
     private String password;
 
+    @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_MASTER_KEY)
+    @Size(max = 50, min = 3, message = "The length of the Kerberos password has to be in range of 3 to 50")
+    private String masterKey;
+
     private Boolean tcpAllowed = false;
+
+    public String getMasterKey() {
+        return masterKey;
+    }
+
+    public void setMasterKey(String masterKey) {
+        this.masterKey = masterKey;
+    }
 
     abstract KerberosType getType();
 

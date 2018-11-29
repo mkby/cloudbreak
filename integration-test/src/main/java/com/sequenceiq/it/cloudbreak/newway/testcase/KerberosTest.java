@@ -1,6 +1,6 @@
 package com.sequenceiq.it.cloudbreak.newway.testcase;
 
-import static com.sequenceiq.it.cloudbreak.newway.cloud.HostGroupType.MASTER;
+/*import static com.sequenceiq.it.cloudbreak.newway.cloud.HostGroupType.MASTER;
 import static com.sequenceiq.it.cloudbreak.newway.context.RunningParameter.key;
 import static com.sequenceiq.it.cloudbreak.newway.mock.model.SaltMock.SALT_RUN;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -17,8 +17,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
-import com.sequenceiq.cloudbreak.type.KerberosType;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosAdRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosCustomRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosMitRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosRequest;
 import com.sequenceiq.it.cloudbreak.newway.Blueprint;
 import com.sequenceiq.it.cloudbreak.newway.BlueprintEntity;
 import com.sequenceiq.it.cloudbreak.newway.Stack;
@@ -30,11 +32,15 @@ import com.sequenceiq.it.cloudbreak.newway.entity.AmbariEntity;
 import com.sequenceiq.it.cloudbreak.newway.entity.ClusterEntity;
 import com.sequenceiq.it.cloudbreak.newway.entity.InstanceGroupEntity;
 
-import spark.Route;
+import spark.Route;*/
 
 public class KerberosTest extends AbstractIntegrationTest {
 
-    private static final String TEST_CONTEXT = "testContext";
+
+
+
+
+    /*private static final String TEST_CONTEXT = "testContext";
 
     private static final String LDAP_SYNC_PATH = "/api/v1/ldap_sync_events";
 
@@ -306,6 +312,6 @@ public class KerberosTest extends AbstractIntegrationTest {
             return MockVerification.verify(HttpMethod.POST, "/api/v1/blueprints/").bodyContains(content);
         }
 
-    }
+    }*/
 
 }

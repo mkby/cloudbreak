@@ -475,7 +475,7 @@ public class OperationDescriptions {
         public static final String CHANGE_CREDENTIAL = "Changes the credential of the environment and the clusters in the environment.";
     }
 
-    public static class KdcOpDescription {
+    public static class KerberosOpDescription {
         public static final String LIST_BY_WORKSPACE = "list kerberos configs for the given workspace";
         public static final String GET_BY_NAME_IN_WORKSPACE = "get kerberos config by name in workspace";
         public static final String CREATE_IN_WORKSPACE = "create kerberos config in workspace";

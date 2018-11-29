@@ -1,6 +1,5 @@
 package com.sequenceiq.cloudbreak.service.kdc;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -16,7 +15,7 @@ import com.sequenceiq.cloudbreak.service.cluster.ClusterService;
 import com.sequenceiq.cloudbreak.service.environment.AbstractEnvironmentAwareService;
 
 @Service
-public class KdcService extends AbstractEnvironmentAwareService<KerberosConfig> {
+public class KerberosService extends AbstractEnvironmentAwareService<KerberosConfig> {
 
     @Inject
     private KerberosConfigRepository kerberosConfigRepository;
@@ -40,7 +39,7 @@ public class KdcService extends AbstractEnvironmentAwareService<KerberosConfig> 
 
     @Override
     public Set<Cluster> getClustersUsingResourceInEnvironment(KerberosConfig resource, Long environmentId) {
-        return clusterService.findAllClustersByKdcConfigInEnvironment(resource, environmentId);
+        return clusterService.findAllClustersByKerberosConfigInEnvironment(resource, environmentId);
     }
 
     @Override
@@ -48,7 +47,4 @@ public class KdcService extends AbstractEnvironmentAwareService<KerberosConfig> 
         return WorkspaceResource.KERBEROS_CONFIG;
     }
 
-    public Set<KerberosConfig> findKdcConfigWithoutCbManaged(Long workspaceId, String environment, Boolean attachGlobal) {
-        return new HashSet<>(super.findAllInWorkspaceAndEnvironment(workspaceId, environment, attachGlobal));
-    }
 }

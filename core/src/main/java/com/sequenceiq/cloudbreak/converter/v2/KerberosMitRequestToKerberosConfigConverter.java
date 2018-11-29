@@ -2,19 +2,17 @@ package com.sequenceiq.cloudbreak.converter.v2;
 
 import org.springframework.stereotype.Component;
 
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcExistingAd;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosMitRequest;
 import com.sequenceiq.cloudbreak.converter.AbstractConversionServiceAwareConverter;
 import com.sequenceiq.cloudbreak.domain.KerberosConfig;
 
 @Component
-public class KdcExistingAdToKerberosConfigConverter extends AbstractConversionServiceAwareConverter<KdcExistingAd, KerberosConfig> {
+public class KerberosMitRequestToKerberosConfigConverter extends AbstractConversionServiceAwareConverter<KerberosMitRequest, KerberosConfig> {
 
     @Override
-    public KerberosConfig convert(KdcExistingAd source) {
+    public KerberosConfig convert(KerberosMitRequest source) {
         KerberosConfig config = new KerberosConfig();
         config.setAdminUrl(source.getAdminUrl());
-        config.setContainerDn(source.getContainerDn());
-        config.setLdapUrl(source.getLdapUrl());
         config.setRealm(source.getRealm());
         config.setUrl(source.getUrl());
         config.setPrincipal(source.getPrincipal());

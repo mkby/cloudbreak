@@ -2,15 +2,15 @@ package com.sequenceiq.cloudbreak.converter.v2;
 
 import org.springframework.stereotype.Component;
 
-import com.sequenceiq.cloudbreak.api.model.kdc.KdcCustom;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosCustomRequest;
 import com.sequenceiq.cloudbreak.converter.AbstractConversionServiceAwareConverter;
 import com.sequenceiq.cloudbreak.domain.KerberosConfig;
 
 @Component
-public class KdcCustomToKerberosConfigConverter extends AbstractConversionServiceAwareConverter<KdcCustom, KerberosConfig> {
+public class KerberosCustomRequestToKerberosConfigConverter extends AbstractConversionServiceAwareConverter<KerberosCustomRequest, KerberosConfig> {
 
     @Override
-    public KerberosConfig convert(KdcCustom source) {
+    public KerberosConfig convert(KerberosCustomRequest source) {
         KerberosConfig config = new KerberosConfig();
         config.setDescriptor(source.getDescriptor());
         config.setKrb5Conf(source.getKrb5Conf());

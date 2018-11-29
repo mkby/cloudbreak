@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 @ApiModel
-public class KdcExistingMit extends KdcBase {
+public class KerberosFreeIpaRequest extends KerberosRequestTypeBase {
 
     @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_KDC_URL)
     private String url;
@@ -18,13 +18,10 @@ public class KdcExistingMit extends KdcBase {
     @ApiModelProperty
     private String realm;
 
-    @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_PRINCIPAL)
-    private String principal;
-
     @ApiModelProperty(hidden = true)
     @Override
     public KerberosType getType() {
-        return KerberosType.EXISTING_MIT;
+        return KerberosType.FREEIPA;
     }
 
     public String getUrl() {
@@ -49,13 +46,5 @@ public class KdcExistingMit extends KdcBase {
 
     public void setRealm(String realm) {
         this.realm = realm;
-    }
-
-    public String getPrincipal() {
-        return principal;
-    }
-
-    public void setPrincipal(String principal) {
-        this.principal = principal;
     }
 }

@@ -9,7 +9,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 @ApiModel
-public class KdcCustom extends KdcBase {
+public class KerberosCustomRequest extends KerberosRequestTypeBase {
 
     @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_PRINCIPAL)
     private String principal;

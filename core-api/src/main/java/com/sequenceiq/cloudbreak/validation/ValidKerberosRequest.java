@@ -12,8 +12,8 @@ import javax.validation.Payload;
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = KdcConfigCreateRequestValidator.class)
-public @interface ValidKdcConfigCreateRequest {
+@Constraint(validatedBy = KerberosRequestConstraintValidator.class)
+public @interface ValidKerberosRequest {
 
     String message() default "KdcConfig request contains one or more invalid data.";
 

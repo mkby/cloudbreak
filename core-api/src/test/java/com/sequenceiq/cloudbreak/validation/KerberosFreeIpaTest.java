@@ -14,11 +14,10 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
-import com.sequenceiq.cloudbreak.type.KerberosType;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosFreeIpaRequest;
 
 @RunWith(Parameterized.class)
-public class KerberosRequestTest {
+public class KerberosFreeIpaTest {
 
     private static final String NOT_NULL_VIOLATION_TEMPLATE = "{javax.validation.constraints.NotNull.message}";
 
@@ -26,24 +25,19 @@ public class KerberosRequestTest {
 
     private final String name;
 
-    private KerberosRequest underTest;
+    private KerberosFreeIpaRequest underTest;
 
     private LocalValidatorFactoryBean localValidatorFactory;
 
-    public KerberosRequestTest(String name, long expectedViolationAmount) {
+    public KerberosFreeIpaTest(String name, long expectedViolationAmount) {
         this.name = name;
         this.expectedViolationAmount = expectedViolationAmount;
     }
 
     @Before
     public void setUp() {
-        underTest = new KerberosRequest();
-        underTest.setType(KerberosType.EXISTING_FREEIPA);
-        underTest.setPrincipal("testprincipal");
+        underTest = new KerberosFreeIpaRequest();
         underTest.setPassword("testpass");
-        underTest.setUrl("url");
-        underTest.setAdminUrl("url");
-        underTest.setRealm("testRealm");
         localValidatorFactory = new LocalValidatorFactoryBean();
         localValidatorFactory.setProviderClass(HibernateValidator.class);
         localValidatorFactory.afterPropertiesSet();
@@ -79,11 +73,11 @@ public class KerberosRequestTest {
     @Test
     public void testBlueprintName() {
         underTest.setNameServers(name);
-        Set<ConstraintViolation<KerberosRequest>> constraintViolations = localValidatorFactory.validate(underTest);
+        Set<ConstraintViolation<KerberosFreeIpaRequest>> constraintViolations = localValidatorFactory.validate(underTest);
         Assert.assertEquals(expectedViolationAmount, countViolationsExceptSpecificOne(constraintViolations));
     }
 
-    private long countViolationsExceptSpecificOne(Set<ConstraintViolation<KerberosRequest>> constraintViolations) {
+    private long countViolationsExceptSpecificOne(Set<ConstraintViolation<KerberosFreeIpaRequest>> constraintViolations) {
         return constraintViolations.stream().filter(violation -> !NOT_NULL_VIOLATION_TEMPLATE.equalsIgnoreCase(violation.getMessageTemplate())).count();
     }
 

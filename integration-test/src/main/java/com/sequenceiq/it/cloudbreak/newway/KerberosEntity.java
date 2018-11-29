@@ -2,9 +2,9 @@ package com.sequenceiq.it.cloudbreak.newway;
 
 import java.util.function.Function;
 
-import com.sequenceiq.cloudbreak.api.model.KerberosRequest;
 import com.sequenceiq.cloudbreak.api.model.KerberosResponse;
-import com.sequenceiq.cloudbreak.type.KerberosType;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosRequest;
+import com.sequenceiq.cloudbreak.api.model.kdc.KerberosFreeIpaRequest;
 import com.sequenceiq.it.IntegrationTestContext;
 import com.sequenceiq.it.cloudbreak.newway.context.TestContext;
 
@@ -23,7 +23,13 @@ public class KerberosEntity extends AbstractCloudbreakEntity<KerberosRequest, Ke
     KerberosEntity(String newId) {
         super(newId);
         request = new KerberosRequest();
-        request.setType(KerberosType.CB_MANAGED);
+        KerberosFreeIpaRequest ipa = new KerberosFreeIpaRequest();
+        ipa.setPassword(DEFAULT_ADMIN_PASSWORD);
+        ipa.setAdminUrl("http://someurl.com");
+        ipa.setRealm("somerealm");
+        ipa.setName("FreeIpaKdc");
+        ipa.setUrl("someUrl");
+        request.setFreeIpa(ipa);
     }
 
     KerberosEntity() {
@@ -43,17 +49,12 @@ public class KerberosEntity extends AbstractCloudbreakEntity<KerberosRequest, Ke
     }
 
     public KerberosEntity withMasterKey(String masterKey) {
-        request.setMasterKey(masterKey);
-        return this;
-    }
-
-    public KerberosEntity withAdmin(String admin) {
-        request.setAdmin(admin);
+        request.getFreeIpa().setMasterKey(masterKey);
         return this;
     }
 
     public KerberosEntity withPassword(String password) {
-        request.setPassword(password);
+        request.getFreeIpa().setPassword(password);
         return this;
     }
 

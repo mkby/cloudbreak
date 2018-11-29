@@ -33,6 +33,7 @@ public class KerberosConfigToKerberosResponseConverter extends AbstractConversio
         kerberosResponse.setKrb5Conf(conversionService.convert(source.getKrb5ConfSecret(), SecretResponse.class));
         kerberosResponse.setDomain(source.getDomain());
         kerberosResponse.setNameServers(source.getNameServers());
+        kerberosResponse.setName(source.getName());
         return kerberosResponse;
     }
 }

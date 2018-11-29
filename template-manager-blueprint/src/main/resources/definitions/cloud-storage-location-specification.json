@@ -24,7 +24,7 @@
       "propertyName": "yarn.nodemanager.remote-app-log-dir",
       "propertyFile": "yarn-site",
       "description": "This is the directory where aggregated application logs should be stored by YARN NodeManager",
-      "defaultPath": "{{{ defaultPath }}}/yarn-app-logs/{{{ clusterName }}}",
+      "defaultPath": "{{{ defaultPath }}}/yarn-app-logs",
       "propertyDisplayName": "YARN Application Logs",
       "relatedService": "NODEMANAGER",
       "requiredForAttachedCluster": false,

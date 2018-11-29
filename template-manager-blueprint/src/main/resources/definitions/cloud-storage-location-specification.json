@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "propertyName": "zeppelin.notebook.dir",
+      "propertyFile": "zeppelin-site",
+      "description": "The root directory where Zeppelin notebook directories are saved",
+      "defaultPath": "{{{ defaultPath }}}/spark/zeppelin/notebook",
+      "propertyDisplayName": "Zeppelin Notebooks Root Directory",
+      "relatedService": "ZEPPELIN_MASTER",
+      "requiredForAttachedCluster": false,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "tez.history.logging.proto-base-dir",
+      "propertyFile": "tez-site",
+      "description": "The directory into which Tez history data will be written when proto history logging service is used",
+      "defaultPath": "{{{ defaultPath }}}/apps/hive/ewarehouse/tablespace/external/hive/sys.db/query_data",
+      "propertyDisplayName": "Tez Proto History Logs",
+      "relatedService": "TEZ_CLIENT",
+      "requiredForAttachedCluster": false,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
       "propertyName": "yarn.nodemanager.remote-app-log-dir",
       "propertyFile": "yarn-site",
       "description": "This is the directory where aggregated application logs should be stored by YARN NodeManager",
@@ -23,7 +43,7 @@
     {
       "propertyName": "spark.eventLog.dir",
       "propertyFile": "spark2-defaults",
-      "description": "The directory in which Spark events are logged",
+      "description": "The directory into which Spark events are logged",
       "defaultPath": "{{{ defaultPath }}}/spark2-history",
       "propertyDisplayName": "Spark Event Logs",
       "relatedService": "SPARK_CLIENT",
@@ -66,6 +86,16 @@
       "description": "Hive stores the table data for managed tables in the warehouse directory",
       "defaultPath": "{{{ defaultPath }}}/apps/hive/warehouse",
       "propertyDisplayName": "Hive Warehouse Directory",
+      "relatedService": "HIVE_METASTORE",
+      "requiredForAttachedCluster": false,
+      "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]
+    },
+    {
+      "propertyName": "hive.metastore.warehouse.external.dir",
+      "propertyFile": "hive-site",
+      "description": "Hive stores the table data for external managed tables in the warehouse directory",
+      "defaultPath": "{{{ defaultPath }}}/apps/hive/ewarehouse/tablespace/external/hive",
+      "propertyDisplayName": "Hive Warehouse Directory For External Tables",
       "relatedService": "HIVE_METASTORE",
       "requiredForAttachedCluster": false,
       "supportedStorages": ["ADLS", "WASB", "S3", "GCS", "ADLS_GEN_2"]

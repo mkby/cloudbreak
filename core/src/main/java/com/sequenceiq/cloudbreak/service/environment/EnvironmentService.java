@@ -53,7 +53,7 @@ import com.sequenceiq.cloudbreak.service.KubernetesConfigService;
 import com.sequenceiq.cloudbreak.service.TransactionService;
 import com.sequenceiq.cloudbreak.service.TransactionService.TransactionExecutionException;
 import com.sequenceiq.cloudbreak.service.TransactionService.TransactionRuntimeExecutionException;
-import com.sequenceiq.cloudbreak.service.kdc.KdcService;
+import com.sequenceiq.cloudbreak.service.kdc.KerberosService;
 import com.sequenceiq.cloudbreak.service.ldapconfig.LdapConfigService;
 import com.sequenceiq.cloudbreak.service.platform.PlatformParameterService;
 import com.sequenceiq.cloudbreak.service.proxy.ProxyConfigService;
@@ -78,7 +78,7 @@ public class EnvironmentService extends AbstractWorkspaceAwareResourceService<En
     private ProxyConfigService proxyConfigService;
 
     @Inject
-    private KdcService kdcService;
+    private KerberosService kdcService;
 
     @Inject
     private EnvironmentCredentialOperationService environmentCredentialOperationService;

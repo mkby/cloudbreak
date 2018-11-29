@@ -57,13 +57,16 @@ public class KerberosRequestToKerberosConfigConverterTest extends AbstractConver
 
     @Test
     public void testConverterWhenKerberosTypeResolverReturnsASpecificKerberosTypeThenThatShouldBeConvertIntoAKerberosConfig() {
-        when(kerberosTypeResolver.propagateKerberosConfiguration(testData.getRequest())).thenReturn(testData.getActualType());
-        when(conversionService.convert(testData.getActualType(), KerberosConfig.class)).thenReturn(testData.getExpected());
+        KerberosRequest request = testData.getRequest();
+        KerberosRequestTypeBase actualType = testData.getActualType();
+        KerberosConfig expected = testData.getExpected();
+        when(kerberosTypeResolver.propagateKerberosConfiguration(request)).thenReturn(actualType);
+        when(conversionService.convert(actualType, KerberosConfig.class)).thenReturn(expected);
 
-        KerberosConfig result = underTest.convert(testData.getRequest());
+        KerberosConfig result = underTest.convert(request);
 
         Assert.assertNotNull(result);
-        Assert.assertEquals(testData.getExpected(), result);
+        Assert.assertEquals(expected, result);
     }
 
     private enum KerberosData {

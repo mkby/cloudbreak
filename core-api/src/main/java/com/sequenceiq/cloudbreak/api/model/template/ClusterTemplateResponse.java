@@ -1,5 +1,7 @@
 package com.sequenceiq.cloudbreak.api.model.template;
 
+import javax.validation.constraints.NotNull;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sequenceiq.cloudbreak.api.model.ResourceStatus;
@@ -18,6 +20,13 @@ public class ClusterTemplateResponse extends ClusterTemplateBase {
 
     private ResourceStatus status;
 
+    @NotNull
+    @ApiModelProperty(ModelDescriptions.ClusterTemplateModelDescription.CLOUD_PLATFORM)
+    private String cloudPlatform;
+
+    @ApiModelProperty(ModelDescriptions.ClusterTemplateModelDescription.CLOUD_PLATFORM)
+    private String datalakeRequired;
+
     public ResourceStatus getStatus() {
         return status;
     }
@@ -32,5 +41,21 @@ public class ClusterTemplateResponse extends ClusterTemplateBase {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getCloudPlatform() {
+        return cloudPlatform;
+    }
+
+    public void setCloudPlatform(String cloudPlatform) {
+        this.cloudPlatform = cloudPlatform;
+    }
+
+    public String getDatalakeRequired() {
+        return datalakeRequired;
+    }
+
+    public void setDatalakeRequired(String datalakeRequired) {
+        this.datalakeRequired = datalakeRequired;
     }
 }

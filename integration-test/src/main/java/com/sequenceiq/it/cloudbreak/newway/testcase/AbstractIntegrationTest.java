@@ -1,25 +1,28 @@
 package com.sequenceiq.it.cloudbreak.newway.testcase;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.ConfigFileApplicationContextInitializer;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.ITestContext;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
 
 import com.sequenceiq.it.cloudbreak.newway.BlueprintEntity;
 import com.sequenceiq.it.cloudbreak.newway.CredentialEntity;
-import com.sequenceiq.it.cloudbreak.newway.ImageCatalog;
 import com.sequenceiq.it.cloudbreak.newway.ImageCatalogEntity;
 import com.sequenceiq.it.cloudbreak.newway.LdapConfigEntity;
 import com.sequenceiq.it.cloudbreak.newway.ProxyConfigEntity;
@@ -60,7 +63,7 @@ public abstract class AbstractIntegrationTest extends AbstractTestNGSpringContex
 
     @BeforeSuite
     public void beforeSuite(ITestContext testngContext) {
-
+        MDC.put("suite", "init of " + getClass().getSimpleName());
     }
 
     @BeforeClass
@@ -68,6 +71,16 @@ public abstract class AbstractIntegrationTest extends AbstractTestNGSpringContex
         if (cleanupBeforeStart) {
             purgeGarbageService.purge();
         }
+    }
+
+    @BeforeMethod
+    public void beforeMethod(Method method) {
+        MDC.put("suite", method.getDeclaringClass().getSimpleName() + '.' + method.getName());
+    }
+
+    @AfterMethod
+    public void afterMethod() {
+        MDC.put("suite", null);
     }
 
     @AfterClass(alwaysRun = true)
@@ -81,7 +94,6 @@ public abstract class AbstractIntegrationTest extends AbstractTestNGSpringContex
     }
 
     @DataProvider
-
     public Object[][] testContext() {
         return new Object[][]{{applicationContext.getBean(TestContext.class)}};
     }
@@ -97,7 +109,7 @@ public abstract class AbstractIntegrationTest extends AbstractTestNGSpringContex
 
     protected void createDefaultImageCatalog(TestContext testContext) {
         testContext
-                .given(ImageCatalog.class)
+                .given(ImageCatalogEntity.class)
                 .when(new ImageCatalogCreateIfNotExistsAction())
                 .when(ImageCatalogEntity::putSetDefaultByName);
     }

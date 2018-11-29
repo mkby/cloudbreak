@@ -1,16 +1,21 @@
 package com.sequenceiq.it.cloudbreak.newway;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
+import com.sequenceiq.cloudbreak.api.endpoint.v3.EnvironmentV3Endpoint;
 import com.sequenceiq.cloudbreak.api.model.CredentialRequest;
 import com.sequenceiq.cloudbreak.api.model.environment.request.EnvironmentRequest;
 import com.sequenceiq.cloudbreak.api.model.environment.request.LocationRequest;
 import com.sequenceiq.cloudbreak.api.model.environment.response.DetailedEnvironmentResponse;
 import com.sequenceiq.cloudbreak.api.model.environment.response.SimpleEnvironmentResponse;
+import com.sequenceiq.it.cloudbreak.newway.context.Purgable;
 import com.sequenceiq.it.cloudbreak.newway.context.TestContext;
 
 @Prototype
-public class EnvironmentEntity extends AbstractCloudbreakEntity<EnvironmentRequest, DetailedEnvironmentResponse, EnvironmentEntity>  {
+public class EnvironmentEntity extends AbstractCloudbreakEntity<EnvironmentRequest, DetailedEnvironmentResponse, EnvironmentEntity>
+        implements Purgable<SimpleEnvironmentResponse> {
 
     public static final String ENVIRONMENT = "ENVIRONMENT";
 
@@ -26,6 +31,11 @@ public class EnvironmentEntity extends AbstractCloudbreakEntity<EnvironmentReque
 
     public EnvironmentEntity(EnvironmentRequest environmentRequest, TestContext testContext) {
         super(environmentRequest, testContext);
+    }
+
+    @Override
+    public String getName() {
+        return getRequest().getName();
     }
 
     @Override
@@ -89,5 +99,37 @@ public class EnvironmentEntity extends AbstractCloudbreakEntity<EnvironmentReque
 
     public void setResponseSimpleEnv(Set<SimpleEnvironmentResponse> response) {
         this.response = response;
+    }
+
+    @Override
+    public List<SimpleEnvironmentResponse> getAll(CloudbreakClient client) {
+        EnvironmentV3Endpoint environmentV3Endpoint = client.getCloudbreakClient().environmentV3Endpoint();
+        return new ArrayList<>(environmentV3Endpoint.list(client.getWorkspaceId()));
+    }
+
+    @Override
+    public boolean deletable(SimpleEnvironmentResponse entity) {
+        return entity.getName().startsWith("mock-");
+    }
+
+    @Override
+    public void delete(SimpleEnvironmentResponse entity, CloudbreakClient client) {
+        try {
+            client.getCloudbreakClient().environmentV3Endpoint().delete(client.getWorkspaceId(), entity.getName());
+        } catch (Exception e) {
+            LOGGER.warn("Something went wrong on {} ({}) purge. {}", entity.getName(), entity.getClass().getSimpleName(), e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void cleanUp(TestContext context, CloudbreakClient cloudbreakClient) {
+        SimpleEnvironmentResponse entity = new SimpleEnvironmentResponse();
+        entity.setName(getName());
+        delete(entity, cloudbreakClient);
+    }
+
+    @Override
+    public int order() {
+        return 500;
     }
 }

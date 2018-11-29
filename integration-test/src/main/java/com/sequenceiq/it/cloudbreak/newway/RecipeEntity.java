@@ -1,13 +1,19 @@
 package com.sequenceiq.it.cloudbreak.newway;
 
-import com.sequenceiq.cloudbreak.api.model.RecipeRequest;
-import com.sequenceiq.cloudbreak.api.model.RecipeResponse;
-import com.sequenceiq.cloudbreak.api.model.RecipeType;
-import com.sequenceiq.it.cloudbreak.newway.context.TestContext;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.WebApplicationException;
 
-public class RecipeEntity extends AbstractCloudbreakEntity<RecipeRequest, RecipeResponse, RecipeEntity> {
+import com.sequenceiq.cloudbreak.api.endpoint.v3.RecipeV3Endpoint;
+import com.sequenceiq.cloudbreak.api.model.RecipeRequest;
+import com.sequenceiq.cloudbreak.api.model.RecipeResponse;
+import com.sequenceiq.cloudbreak.api.model.RecipeType;
+import com.sequenceiq.cloudbreak.api.model.RecipeViewResponse;
+import com.sequenceiq.it.cloudbreak.newway.context.Purgable;
+import com.sequenceiq.it.cloudbreak.newway.context.TestContext;
+
+public class RecipeEntity extends AbstractCloudbreakEntity<RecipeRequest, RecipeResponse, RecipeEntity> implements Purgable<RecipeViewResponse> {
     public static final String RECIPE = "RECIPE";
 
     public RecipeEntity(String newId) {
@@ -63,5 +69,32 @@ public class RecipeEntity extends AbstractCloudbreakEntity<RecipeRequest, Recipe
     public RecipeEntity withUri(String uri) {
         getRequest().setUri(uri);
         return this;
+    }
+
+    @Override
+    public List<RecipeViewResponse> getAll(CloudbreakClient client) {
+        RecipeV3Endpoint recipeV3Endpoint = client.getCloudbreakClient().recipeV3Endpoint();
+        return recipeV3Endpoint.listByWorkspace(client.getWorkspaceId()).stream()
+                .filter(s -> s.getName() != null)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean deletable(RecipeViewResponse entity) {
+        return entity.getName().startsWith("mock-");
+    }
+
+    @Override
+    public void delete(RecipeViewResponse entity, CloudbreakClient client) {
+        try {
+            client.getCloudbreakClient().recipeV3Endpoint().deleteInWorkspace(client.getWorkspaceId(), entity.getName());
+        } catch (Exception e) {
+            LOGGER.warn("Something went wrong on {} purge. {}", entity.getName(), e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public int order() {
+        return 500;
     }
 }

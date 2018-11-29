@@ -330,7 +330,7 @@ public class ClusterHostServiceRunner {
             servicePillar.put("forwarder-zones", new SaltPillarProperties("/unbound/forwarders.sls",
                     singletonMap("forwarder-zones", singletonMap(kerberosConfig.getDomain(), singletonMap("nameservers", ipList)))));
         } else if (!secure || kerberosConfig == null
-                || (kerberosConfig.getType() != KerberosType.EXISTING_FREEIPA && kerberosConfig.getType() != KerberosType.EXISTING_AD)) {
+                || (kerberosConfig.getType() != KerberosType.FREEIPA && kerberosConfig.getType() != KerberosType.ACTIVE_DIRECTORY)) {
             saveDatalakeNameservers(stack, servicePillar);
         }
     }

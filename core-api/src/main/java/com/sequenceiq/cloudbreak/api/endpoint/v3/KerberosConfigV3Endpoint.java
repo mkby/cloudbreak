@@ -48,6 +48,7 @@ public interface KerberosConfigV3Endpoint {
 
     @POST
     @Path("")
+    @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = KerberosOpDescription.CREATE_IN_WORKSPACE, produces = ContentType.JSON, notes = Notes.KERBEROS_CONFIG_NOTES,
             nickname = "createKerberosConfigInWorkspace")
     KerberosResponse createInWorkspace(@PathParam("workspaceId") Long workspaceId, @Valid KerberosRequest request);

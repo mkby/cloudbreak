@@ -1,6 +1,5 @@
 package com.sequenceiq.cloudbreak.api.model.kdc;
 
-import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_CONFIG_NAME;
 import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_DOMAIN;
 import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_KDC_VERIFY_KDC_TRUST;
 import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_MASTER_KEY;
@@ -8,7 +7,6 @@ import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescript
 import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_PASSWORD;
 import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_TCP_ALLOW;
 
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
@@ -22,10 +20,6 @@ import io.swagger.annotations.ApiModelProperty;
 @ApiModel
 @JsonIgnoreProperties(ignoreUnknown = true, value = "type")
 public abstract class KerberosRequestTypeBase implements JsonEntity {
-
-    @ApiModelProperty(value = KERBEROS_CONFIG_NAME, required = true)
-    @NotNull
-    private String name;
 
     @ApiModelProperty(value = KERBEROS_KDC_VERIFY_KDC_TRUST)
     private Boolean verifyKdcTrust = true;
@@ -58,14 +52,6 @@ public abstract class KerberosRequestTypeBase implements JsonEntity {
     }
 
     abstract KerberosType getType();
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 
     public Boolean getVerifyKdcTrust() {
         return verifyKdcTrust;

@@ -19,6 +19,7 @@ public class KerberosRequestToKerberosConfigConverter extends AbstractConversion
     public KerberosConfig convert(KerberosRequest source) {
         KerberosConfig kerberosConfig = getConversionService().convert(kerberosTypeResolver.propagateKerberosConfiguration(source), KerberosConfig.class);
         kerberosConfig.setDescription(source.getDescription());
+        kerberosConfig.setName(source.getName());
         return kerberosConfig;
     }
 

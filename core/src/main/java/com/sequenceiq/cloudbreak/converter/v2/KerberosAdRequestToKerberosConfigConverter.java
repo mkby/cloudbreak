@@ -18,7 +18,6 @@ public class KerberosAdRequestToKerberosConfigConverter extends AbstractConversi
         config.setRealm(source.getRealm());
         config.setUrl(source.getUrl());
         config.setPrincipal(source.getPrincipal());
-        config.setName(source.getName());
         config.setType(source.getType());
         config.setDomain(source.getDomain());
         config.setNameServers(source.getNameServers());

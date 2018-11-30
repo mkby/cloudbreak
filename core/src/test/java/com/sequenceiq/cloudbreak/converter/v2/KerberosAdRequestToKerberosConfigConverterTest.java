@@ -28,8 +28,6 @@ public class KerberosAdRequestToKerberosConfigConverterTest {
 
     private static final String PRINCIPAL = "principal";
 
-    private static final String NAME = "configname";
-
     private static final KerberosType TYPE = ACTIVE_DIRECTORY;
 
     private static final String DOMAIN = "someDomain";
@@ -57,7 +55,6 @@ public class KerberosAdRequestToKerberosConfigConverterTest {
         when(request.getRealm()).thenReturn(REALM);
         when(request.getUrl()).thenReturn(URL);
         when(request.getPrincipal()).thenReturn(PRINCIPAL);
-        when(request.getName()).thenReturn(NAME);
         when(request.getType()).thenReturn(TYPE);
         when(request.getDomain()).thenReturn(DOMAIN);
         when(request.getNameServers()).thenReturn(NAME_SERVERS);
@@ -77,7 +74,6 @@ public class KerberosAdRequestToKerberosConfigConverterTest {
         assertEquals(REALM, result.getRealm());
         assertEquals(URL, result.getUrl());
         assertEquals(PRINCIPAL, result.getPrincipal());
-        assertEquals(NAME, result.getName());
         assertEquals(TYPE, result.getType());
         assertEquals(DOMAIN, result.getDomain());
         assertEquals(NAME_SERVERS, result.getNameServers());

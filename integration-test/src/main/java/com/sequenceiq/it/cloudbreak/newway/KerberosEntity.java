@@ -27,8 +27,8 @@ public class KerberosEntity extends AbstractCloudbreakEntity<KerberosRequest, Ke
         ipa.setPassword(DEFAULT_ADMIN_PASSWORD);
         ipa.setAdminUrl("http://someurl.com");
         ipa.setRealm("somerealm");
-        ipa.setName("FreeIpaKdc");
         ipa.setUrl("someUrl");
+        request.setName("FreeIpaKdc");
         request.setFreeIpa(ipa);
     }
 

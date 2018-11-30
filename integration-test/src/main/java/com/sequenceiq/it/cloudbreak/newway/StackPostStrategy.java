@@ -71,7 +71,7 @@ public class StackPostStrategy implements Strategy {
         if (kerberos != null && updateKerberos) {
             AmbariV2Request ambariReq = stackEntity.getRequest().getCluster().getAmbari();
             ambariReq.setEnableSecurity(true);
-            ambariReq.setKerberosConfigName(kerberos.getRequest().getFreeIpa().getName());
+            ambariReq.setKerberosConfigName(kerberos.getRequest().getName());
         }
 
         ClusterGateway clusterGateway = ClusterGateway.getTestContextGateway().apply(integrationTestContext);

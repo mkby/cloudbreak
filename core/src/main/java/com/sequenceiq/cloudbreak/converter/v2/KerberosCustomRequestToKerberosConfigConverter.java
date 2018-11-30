@@ -15,7 +15,6 @@ public class KerberosCustomRequestToKerberosConfigConverter extends AbstractConv
         config.setDescriptor(source.getDescriptor());
         config.setKrb5Conf(source.getKrb5Conf());
         config.setPrincipal(source.getPrincipal());
-        config.setName(source.getName());
         config.setType(source.getType());
         config.setDomain(source.getDomain());
         config.setNameServers(source.getNameServers());

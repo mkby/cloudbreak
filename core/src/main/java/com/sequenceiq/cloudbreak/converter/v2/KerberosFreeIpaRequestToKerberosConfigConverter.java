@@ -15,7 +15,6 @@ public class KerberosFreeIpaRequestToKerberosConfigConverter extends AbstractCon
         config.setAdminUrl(source.getAdminUrl());
         config.setRealm(source.getRealm());
         config.setUrl(source.getUrl());
-        config.setName(source.getName());
         config.setType(source.getType());
         config.setDomain(source.getDomain());
         config.setNameServers(source.getNameServers());

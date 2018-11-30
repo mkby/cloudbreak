@@ -7,7 +7,7 @@ import javax.validation.ConstraintValidatorContext;
 
 import com.sequenceiq.cloudbreak.api.model.kdc.KerberosRequest;
 
-public class KerberosRequestConstraintValidator implements ConstraintValidator<ValidKerberosRequest, KerberosRequest> {
+public class KerberosRequestValidator implements ConstraintValidator<ValidKerberosRequest, KerberosRequest> {
 
     @Override
     public boolean isValid(KerberosRequest req, ConstraintValidatorContext constraintValidatorContext) {

@@ -121,7 +121,7 @@ public class EnvironmentServiceTest {
     private ProxyConfigService proxyConfigService;
 
     @Mock
-    private KerberosService kdcService;
+    private KerberosService kerberosService;
 
     @Mock
     private EnvironmentCredentialOperationService environmentCredentialOperationService;
@@ -180,7 +180,7 @@ public class EnvironmentServiceTest {
         when(ldapConfigService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
         when(rdsConfigService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
         when(proxyConfigService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
-        when(kdcService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
+        when(kerberosService.findByNamesInWorkspace(anySet(), anyLong())).thenReturn(Collections.emptySet());
         when(environmentCreationValidator.validate(any(), any(), anyBoolean())).thenReturn(ValidationResult.builder().build());
         when(workspaceService.get(anyLong(), any())).thenReturn(workspace);
         when(restRequestThreadLocalService.getCloudbreakUser()).thenReturn(new CloudbreakUser("", "", "", ""));
@@ -588,7 +588,7 @@ public class EnvironmentServiceTest {
         when(ldapConfigService.getClustersUsingResourceInEnvironment(ldap2, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1, cluster2));
         when(proxyConfigService.getClustersUsingResourceInEnvironment(proxy1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
         when(rdsConfigService.getClustersUsingResourceInEnvironment(rds1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
-        when(kdcService.getClustersUsingResourceInEnvironment(kdc1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
+        when(kerberosService.getClustersUsingResourceInEnvironment(kdc1, ENVIRONMENT_ID)).thenReturn(Sets.newHashSet(cluster1));
 
         exceptionRule.expect(BadRequestException.class);
         exceptionRule.expectMessage(String.format("RDS config '%s' cannot be detached from environment 'EnvName' "

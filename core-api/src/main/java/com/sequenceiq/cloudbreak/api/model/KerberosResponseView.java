@@ -21,6 +21,8 @@ public class KerberosResponseView {
 
     private KerberosType type;
 
+    private String description;
+
     public KerberosType getType() {
         return type;
     }
@@ -45,4 +47,11 @@ public class KerberosResponseView {
         this.environments = environments;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

@@ -18,6 +18,7 @@ public class KerberosConfigToKerberosResponseViewConverter extends AbstractConve
         view.setName(source.getName());
         view.setType(source.getType());
         view.setEnvironments(source.getEnvironments().stream().map(CompactView::getName).collect(Collectors.toSet()));
+        view.setDescription(source.getDescription());
         return view;
     }
 

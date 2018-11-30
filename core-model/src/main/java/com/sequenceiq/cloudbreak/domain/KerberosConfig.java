@@ -103,6 +103,9 @@ public class KerberosConfig implements ProvisionEntity, EnvironmentAwareResource
     @JoinTable(name = "env_kdc", joinColumns = @JoinColumn(name = "kdcid"), inverseJoinColumns = @JoinColumn(name = "envid"))
     private Set<EnvironmentView> environments = new HashSet<>();
 
+    @Column(length = 1000000, columnDefinition = "TEXT")
+    private String description;
+
     public Long getId() {
         return id;
     }
@@ -297,4 +300,11 @@ public class KerberosConfig implements ProvisionEntity, EnvironmentAwareResource
         this.name = name;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

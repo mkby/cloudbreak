@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Size;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -38,6 +39,10 @@ public class KerberosRequest implements JsonEntity {
 
     @ApiModelProperty(ModelDescriptions.ENVIRONMENTS)
     private Set<String> environments = new HashSet<>();
+
+    @Size(max = 1000)
+    @ApiModelProperty(ModelDescriptions.DESCRIPTION)
+    private String description;
 
     public Set<String> getEnvironments() {
         return environments;
@@ -77,5 +82,13 @@ public class KerberosRequest implements JsonEntity {
 
     public void setCustom(KerberosCustomRequest custom) {
         this.custom = custom;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

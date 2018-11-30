@@ -12,10 +12,10 @@ import javax.validation.Payload;
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = KerberosRequestConstraintValidator.class)
+@Constraint(validatedBy = KerberosRequestValidator.class)
 public @interface ValidKerberosRequest {
 
-    String message() default "KdcConfig request contains one or more invalid data.";
+    String message() default "KerberosRequest contains one or more invalid data.";
 
     Class<?>[] groups() default {};
 

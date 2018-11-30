@@ -1,6 +1,12 @@
 package com.sequenceiq.cloudbreak.api.model.kdc;
 
-import com.sequenceiq.cloudbreak.doc.ModelDescriptions;
+import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_ADMIN_URL;
+import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_CONTAINER_DN;
+import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_KDC_URL;
+import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_LDAP_URL;
+import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_PRINCIPAL;
+import static com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription.KERBEROS_REALM;
+
 import com.sequenceiq.cloudbreak.type.KerberosType;
 
 import io.swagger.annotations.ApiModel;
@@ -9,22 +15,22 @@ import io.swagger.annotations.ApiModelProperty;
 @ApiModel
 public class KerberosAdRequest extends KerberosRequestTypeBase {
 
-    @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_KDC_URL)
+    @ApiModelProperty(value = KERBEROS_KDC_URL, required = true)
     private String url;
 
-    @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_ADMIN_URL)
+    @ApiModelProperty(value = KERBEROS_ADMIN_URL, required = true)
     private String adminUrl;
 
-    @ApiModelProperty
+    @ApiModelProperty(value = KERBEROS_REALM, required = true)
     private String realm;
 
-    @ApiModelProperty
+    @ApiModelProperty(value = KERBEROS_LDAP_URL, required = true)
     private String ldapUrl;
 
-    @ApiModelProperty
+    @ApiModelProperty(value = KERBEROS_CONTAINER_DN, required = true)
     private String containerDn;
 
-    @ApiModelProperty(ModelDescriptions.StackModelDescription.KERBEROS_PRINCIPAL)
+    @ApiModelProperty(value = KERBEROS_PRINCIPAL, required = true)
     private String principal;
 
     @ApiModelProperty(hidden = true)

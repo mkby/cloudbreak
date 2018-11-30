@@ -1,11 +1,16 @@
 package com.sequenceiq.cloudbreak.api.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.sequenceiq.cloudbreak.doc.ModelDescriptions;
 import com.sequenceiq.cloudbreak.doc.ModelDescriptions.StackModelDescription;
 import com.sequenceiq.cloudbreak.type.KerberosType;
 
@@ -46,6 +51,13 @@ public abstract class KerberosResponseBase implements JsonEntity {
             + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))*$)")
     @ApiModelProperty(StackModelDescription.KERBEROS_NAMESERVERS)
     private String nameServers;
+
+    @Size(max = 1000)
+    @ApiModelProperty(ModelDescriptions.DESCRIPTION)
+    private String description;
+
+    @ApiModelProperty(ModelDescriptions.ENVIRONMENTS)
+    private Set<String> environments = new HashSet<>();
 
     public KerberosType getType() {
         return type;
@@ -133,5 +145,21 @@ public abstract class KerberosResponseBase implements JsonEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Set<String> getEnvironments() {
+        return environments;
+    }
+
+    public void setEnvironments(Set<String> environments) {
+        this.environments = environments;
     }
 }

@@ -31,7 +31,6 @@ import com.microsoft.azure.credentials.ApplicationTokenCredentials;
 import com.microsoft.azure.credentials.AzureTokenCredentials;
 import com.microsoft.azure.management.Azure;
 import com.microsoft.azure.management.compute.AvailabilitySet;
-import com.microsoft.azure.management.compute.OperatingSystemStateTypes;
 import com.microsoft.azure.management.compute.PowerState;
 import com.microsoft.azure.management.compute.VirtualMachine;
 import com.microsoft.azure.management.compute.VirtualMachineCustomImage;
@@ -448,40 +447,18 @@ public class AzureClient {
         return handleAuthException(() -> azure.publicIPAddresses().getByResourceGroup(resourceGroup, ipName));
     }
 
-    public String getCustomImageId(String resourceGroup, String fromVhdUri, String region) {
-        String vhdName = fromVhdUri.substring(fromVhdUri.lastIndexOf('/') + 1);
-        String imageName = vhdName + '-' + region.toLowerCase().replaceAll("\\s", "");
-        PagedList<VirtualMachineCustomImage> customImageList = getCustomImageList(resourceGroup);
-        Optional<VirtualMachineCustomImage> virtualMachineCustomImage = customImageList.stream()
-                .filter(customImage -> customImage.name().equals(imageName) && customImage.region().label().equals(region)).findFirst();
-        if (virtualMachineCustomImage.isPresent()) {
-            LOGGER.info("custom image found in '{}' resource group with name '{}'", resourceGroup, imageName);
-            return virtualMachineCustomImage.get().id();
-        } else {
-            LOGGER.info("custom image NOT found in '{}' resource group with name '{}'", resourceGroup, imageName);
-            VirtualMachineCustomImage customImage = createCustomImage(imageName, resourceGroup, fromVhdUri, region);
-            return customImage.id();
-        }
+    /** image id is the full path of subscriptions/xxx/xxx/images/xxx
+     *  so here we should get image name from catalog.json
+     */
+    public String getCustomImageId(String resourceGroup, String imageName, String region) {
+        String imageId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + resourceGroup
+                + "/providers/Microsoft.Compute/images/" + imageName;
+        LOGGER.info("Image ID is: {}", imageId);
+        return imageId;
     }
 
     private PagedList<VirtualMachineCustomImage> getCustomImageList(String resourceGroup) {
         return handleAuthException(() -> azure.virtualMachineCustomImages().listByResourceGroup(resourceGroup));
-    }
-
-    private VirtualMachineCustomImage createCustomImage(String imageName, String resourceGroup, String fromVhdUri, String region) {
-        return handleAuthException(() -> {
-            LOGGER.info("create custom image from '{}' with name '{}' into '{}' resource group (Region: {})",
-                    fromVhdUri, imageName, resourceGroup, region);
-            if (!azure.resourceGroups().checkExistence(resourceGroup)) {
-                azure.resourceGroups().define(resourceGroup).withRegion(region).create();
-            }
-            return azure.virtualMachineCustomImages()
-                    .define(imageName)
-                    .withRegion(region)
-                    .withExistingResourceGroup(resourceGroup)
-                    .withLinuxFromVhd(fromVhdUri, OperatingSystemStateTypes.GENERALIZED)
-                    .create();
-        });
     }
 
     public PagedList<PublicIPAddress> getPublicIpAddresses(String resourceGroup) {

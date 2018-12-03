@@ -63,11 +63,11 @@ public class AzureStorage {
 
     public String getCustomImageId(AzureClient client, AuthenticatedContext ac, CloudStack stack) {
         String imageResourceGroupName = getImageResourceGroupName(ac.getCloudContext(), stack);
-        AzureCredentialView acv = new AzureCredentialView(ac.getCloudCredential());
-        String imageStorageName = getImageStorageName(acv, ac.getCloudContext(), stack);
-        String imageBlobUri = client.getImageBlobUri(imageResourceGroupName, imageStorageName, IMAGES_CONTAINER, stack.getImage().getImageName());
+//        AzureCredentialView acv = new AzureCredentialView(ac.getCloudCredential());
+//        String imageStorageName = getImageStorageName(acv, ac.getCloudContext(), stack);
+//        String imageBlobUri = client.getImageBlobUri(imageResourceGroupName, imageStorageName, IMAGES_CONTAINER, stack.getImage().getImageName());
         String region = ac.getCloudContext().getLocation().getRegion().value();
-        return getCustomImageId(imageBlobUri, imageResourceGroupName, region, client);
+        return client.getCustomImageId(imageResourceGroupName, stack.getImage().getImageName(), region);
     }
 
     private String getCustomImageId(String vhd, String imageResourceGroupName, String region, AzureClient client) {

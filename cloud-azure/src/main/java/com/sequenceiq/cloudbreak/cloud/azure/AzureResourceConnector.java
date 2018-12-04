@@ -198,14 +198,14 @@ public class AzureResourceConnector implements ResourceConnector<Map<String, Map
                 } catch (ActionWentFailException ignored) {
                     LOGGER.info(String.format("Resource group not found with name: %s", resource.getName()));
                 }
-                if (azureStorage.isPersistentStorage(azureStorage.getPersistentStorageName(stack))) {
-                    CloudContext cloudCtx = authenticatedContext.getCloudContext();
-                    AzureCredentialView azureCredentialView = new AzureCredentialView(authenticatedContext.getCloudCredential());
-                    String imageStorageName = azureStorage.getImageStorageName(azureCredentialView, cloudCtx, stack);
-                    String imageResourceGroupName = azureStorage.getImageResourceGroupName(cloudCtx, stack);
-                    String diskContainer = azureStorage.getDiskContainerName(cloudCtx);
-                    deleteContainer(client, imageResourceGroupName, imageStorageName, diskContainer);
-                }
+//                if (azureStorage.isPersistentStorage(azureStorage.getPersistentStorageName(stack))) {
+//                    CloudContext cloudCtx = authenticatedContext.getCloudContext();
+//                    AzureCredentialView azureCredentialView = new AzureCredentialView(authenticatedContext.getCloudCredential());
+//                    String imageStorageName = azureStorage.getImageStorageName(azureCredentialView, cloudCtx, stack);
+//                    String imageResourceGroupName = azureStorage.getImageResourceGroupName(cloudCtx, stack);
+//                    String diskContainer = azureStorage.getDiskContainerName(cloudCtx);
+//                    deleteContainer(client, imageResourceGroupName, imageStorageName, diskContainer);
+//                }
             } catch (CloudException e) {
                 if (e.response().code() != AzureConstants.NOT_FOUND) {
                     throw new CloudConnectorException(String.format("Could not delete resource group: %s", resource.getName()), e);

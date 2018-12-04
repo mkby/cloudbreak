@@ -70,11 +70,11 @@ public class AzureStorage {
         return client.getCustomImageId(imageResourceGroupName, stack.getImage().getImageName(), region);
     }
 
-    private String getCustomImageId(String vhd, String imageResourceGroupName, String region, AzureClient client) {
-        String customImageId = client.getCustomImageId(imageResourceGroupName, vhd, region);
-        LOGGER.info("custom image id: {}", customImageId);
-        return customImageId;
-    }
+//    private String getCustomImageId(String vhd, String imageResourceGroupName, String region, AzureClient client) {
+//        String customImageId = client.getCustomImageId(imageResourceGroupName, vhd, region);
+//        LOGGER.info("custom image id: {}", customImageId);
+//        return customImageId;
+//    }
 
     public String getImageStorageName(AzureCredentialView acv, CloudContext cloudContext, CloudStack stack) {
         String storageName;

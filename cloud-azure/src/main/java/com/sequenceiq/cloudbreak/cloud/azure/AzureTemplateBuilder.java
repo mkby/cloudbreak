@@ -64,14 +64,14 @@ public class AzureTemplateBuilder {
             Map<String, Object> model = new HashMap<>();
             AzureInstanceCredentialView azureInstanceCredentialView = new AzureInstanceCredentialView(cloudStack);
             model.put("credential", azureInstanceCredentialView);
-            String rootDiskStorage = azureStorage.getImageStorageName(armCredentialView, cloudContext, cloudStack);
+//            String rootDiskStorage = azureStorage.getImageStorageName(armCredentialView, cloudContext, cloudStack);
             AzureSecurityView armSecurityView = new AzureSecurityView(cloudStack.getGroups());
 
             // needed for pre 1.16.5 templates
             model.put("existingSubnetName", azureUtils.getCustomSubnetIds(network).stream().findFirst().orElse(""));
 
             model.put("customImageId", customImageId);
-            model.put("storage_account_name", rootDiskStorage);
+            model.put("storage_account_name", "NO_USE");
             model.put("image_storage_container_name", AzureStorage.IMAGES_CONTAINER);
             model.put("storage_container_name", azureStorage.getDiskContainerName(cloudContext));
             model.put("storage_vhd_name", imageName);

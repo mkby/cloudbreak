@@ -451,7 +451,7 @@ public class AzureClient {
      *  so here we should get image name from catalog.json
      */
     public String getCustomImageId(String resourceGroup, String imageName, String region) {
-        String imageId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + resourceGroup
+        String imageId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + region.trim().toLowerCase()
                 + "/providers/Microsoft.Compute/images/" + imageName;
         LOGGER.info("Image ID is: {}", imageId);
         return imageId;
